@@ -61,6 +61,6 @@ def get_position():
     position,_,_ = packet_handler.read4ByteTxRx(port, MOTOR, 132)
     return position
 
-setup()
-set_op_mode()
-drop()
+# setup()
+# set_op_mode()
+# drop()

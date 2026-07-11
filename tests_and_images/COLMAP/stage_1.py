@@ -15,7 +15,7 @@ class LegoReconstructionPipeline:
     End-to-End photogrammetry orchestration pipeline managing the data flow 
     from raw tuning-plate images to a dense, filtered 3D point cloud.
     """
-    def __init__(self, workspace_dir: str):
+    def __init__(self, workspace_dir: str, init_workspace: bool = True):
         self.workspace = Path(workspace_dir)
         
         # Define strict structural paths mandated by the COLMAP architecture
@@ -28,7 +28,8 @@ class LegoReconstructionPipeline:
         self.mvs_dir = self.workspace / "mvs"
         self.final_cloud_path = self.workspace / "lego_block_final.ply"
         
-        self._initialize_workspace()
+        if init_workspace:
+            self._initialize_workspace()
 
     def _initialize_workspace(self):
         """

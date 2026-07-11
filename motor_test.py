@@ -54,7 +54,7 @@ def go_to_position(pos):
 
 def drop():
     position = get_position()
-    new_position = (position + 4096)
+    new_position = (position + 4096//32)
     go_to_position(new_position)
 
 def get_position():

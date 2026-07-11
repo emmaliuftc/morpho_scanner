@@ -4,6 +4,7 @@ from picamera2 import Picamera2
 from libcamera import controls
 import motor_test
 from dynamixel_sdk import *
+import select
 
 
 # Make these match the actual ID numbers.  
@@ -23,11 +24,11 @@ motor_test.set_op_mode()
 
 picam = Picamera2()
 
-picam.preview_configuration.main.size = (1280, 720)
+picam.preview_configuration.main.size = (4608, 2592)
 picam.preview_configuration.main.format = "RGB888"
 picam.preview_configuration.align()
-# picam.set_controls({"AfMode": controls.AfModeEnum.Auto})
-picam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 10.0})
+picam.set_controls({"AfMode": controls.AfModeEnum.Auto})
+# picam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 10.0})
 # picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
 picam.configure("preview")
@@ -36,14 +37,11 @@ picam.start()
 print("Camera preview started. Press 'q' to exit.")
 
 try:
-    while True:
+    for i in range(32):
         motor_test.drop()
-        time.sleep(1)
+        time.sleep(2)
         image = picam.capture_array()
-        cv2.imwrite("scanned_output.jpg", image)
-        print("image saved!")
-        time.sleep(0.25)
-        if cv2.waitKey(1) == ord('q'):
-            break
+        cv2.imwrite(f"capture_{i}.jpg", image)
+        print(f"{i} image added")
 finally:
     picam.stop()

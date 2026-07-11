@@ -1,4 +1,4 @@
-# morpho_scanner : A custon 3D morphological scanner mesh
+# morpho_scanner : A custom 3D morphological scanner mesh
 
 - `motor_test.py` : test motor
 - `picamera_test.py` : test camera

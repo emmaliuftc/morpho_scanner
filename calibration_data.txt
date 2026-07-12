@@ -1,0 +1,54 @@
+[0:28:11.626379089] [4062] [1;32m INFO [1;37mCamera [1;34mcamera_manager.cpp:330 [0mlibcamera v0.5.2+99-bfd68f78
+[0:28:11.633821423] [4069] [1;32m INFO [1;37mRPI [1;34mpisp.cpp:720 [0mlibpisp version v1.2.1 981977ff21f3 29-04-2025 (14:13:50)
+[0:28:11.636391368] [4069] [1;32m INFO [1;37mIPAProxy [1;34mipa_proxy.cpp:180 [0mUsing tuning file /usr/share/libcamera/ipa/rpi/pisp/imx708.json
+[0:28:11.643573978] [4069] [1;32m INFO [1;37mCamera [1;34mcamera_manager.cpp:220 [0mAdding camera '/base/axi/pcie@1000120000/rp1/i2c@88000/imx708@1a' for pipeline handler rpi/pisp
+[0:28:11.643591052] [4069] [1;32m INFO [1;37mRPI [1;34mpisp.cpp:1179 [0mRegistered camera /base/axi/pcie@1000120000/rp1/i2c@88000/imx708@1a to CFE device /dev/media2 and ISP device /dev/media0 using PiSP variant BCM2712_D0
+[0:28:11.646569241] [4062] [1;32m INFO [1;37mCamera [1;34mcamera.cpp:1215 [0mconfiguring streams: (0) 4608x2592-RGB888/sRGB (1) 4608x2592-BGGR_PISP_COMP1/RAW
+[0:28:11.646672723] [4069] [1;32m INFO [1;37mRPI [1;34mpisp.cpp:1483 [0mSensor: /base/axi/pcie@1000120000/rp1/i2c@88000/imx708@1a - Selected sensor format: 4608x2592-SBGGR10_1X10/RAW - Selected CFE format: 4608x2592-PC1B/RAW
+Initializing Picamera2...
+Camera preview started. Beginning focus sweep...
+Sweeping lens positions from 0.0 to 15.0 (step: 0.5)
+------------------------------------------------------------
+Lens Position   | Sharpness Score      | Status         
+------------------------------------------------------------
+0.00            | 5.5846               | * NEW BEST *   
+0.50            | 4.7618               |                
+1.00            | 2.9107               |                
+1.50            | 2.5283               |                
+2.00            | 2.7016               |                
+2.50            | 2.8638               |                
+3.00            | 3.0706               |                
+3.50            | 3.1797               |                
+4.00            | 3.4796               |                
+4.50            | 3.6531               |                
+5.00            | 4.1396               |                
+5.50            | 5.0178               |                
+6.00            | 5.7209               | * NEW BEST *   
+6.50            | 5.9272               | * NEW BEST *   
+7.00            | 6.2266               | * NEW BEST *   
+7.50            | 4.7300               |                
+8.00            | 3.7097               |                
+8.50            | 3.1849               |                
+9.00            | 2.8019               |                
+9.50            | 2.6647               |                
+10.00           | 2.6371               |                
+10.50           | 2.4921               |                
+11.00           | 2.3860               |                
+11.50           | 2.3234               |                
+12.00           | 2.3183               |                
+12.50           | 2.1664               |                
+13.00           | 2.3115               |                
+13.50           | 2.3298               |                
+14.00           | 2.2525               |                
+14.50           | 2.1105               |                
+15.00           | 2.1837               |                
+------------------------------------------------------------
+Focus sweep completed.
+Optimal Lens Position: 7.00 (Sharpness Score: 6.2266)
+Worst Lens Position:   14.50 (Sharpness Score: 2.1105)
+Saved optimal focus test image to 'calibration_best.jpg'
+Saved worst focus test image to 'calibration_worst.jpg'
+
+To lock this focus point in your scanner script, use:
+picam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 7.00})
+Camera preview stopped.

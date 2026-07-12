@@ -67,6 +67,9 @@ def run_calibration(start_pos=0.0, end_pos=20.0, step=0.5):
                 worst_image = image.copy()
                 
             print(f"{pos_val:<15.2f} | {score:<20.4f} | {status:<15}")
+
+            cv2.imwrite(f"./calibration_tests/calibration_{pos}.jpg", image)
+
             
         print("-" * 60)
         print("Focus sweep completed.")
@@ -75,12 +78,13 @@ def run_calibration(start_pos=0.0, end_pos=20.0, step=0.5):
         
         # Save verification images
         if best_image is not None:
-            cv2.imwrite("calibration_best.jpg", best_image)
+            cv2.imwrite("./calibration_tests/calibration_best.jpg", best_image)
             print("Saved optimal focus test image to 'calibration_best.jpg'")
         if worst_image is not None:
-            cv2.imwrite("calibration_worst.jpg", worst_image)
+            cv2.imwrite("./calibration_tests/calibration_worst.jpg", worst_image)
             print("Saved worst focus test image to 'calibration_worst.jpg'")
-            
+
+                    
         print("\nTo lock this focus point in your scanner script, use:")
         print(f'picam.set_controls({{"AfMode": controls.AfModeEnum.Manual, "LensPosition": {best_position:.2f}}})')
         

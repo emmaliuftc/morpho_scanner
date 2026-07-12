@@ -22,17 +22,21 @@ motor_test.setup()
 motor_test.set_op_mode()
 
 
+print("Initializing Picamera2...")
 picam = Picamera2()
 
+# Configure main stream to use high resolution for precise sharpness analysis
 picam.preview_configuration.main.size = (4608, 2592)
 picam.preview_configuration.main.format = "RGB888"
 picam.preview_configuration.align()
-picam.set_controls({"AfMode": controls.AfModeEnum.Auto})
-# picam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 10.0})
-# picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
 picam.configure("preview")
 picam.start()
+
+picam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 6.0})
+            
+# Wait for the lens to mechanically settle
+time.sleep(0.4)
 
 print("Camera preview started. Press 'q' to exit.")
 
@@ -41,7 +45,7 @@ try:
         motor_test.drop()
         time.sleep(2)
         image = picam.capture_array()
-        cv2.imwrite(f"capture_{i}.jpg", image)
+        cv2.imwrite(f"./captures_7-11/capture_{i}.jpg", image)
         print(f"{i} image added")
 finally:
     picam.stop()

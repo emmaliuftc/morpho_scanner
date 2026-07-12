@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import numpy as np
 from PIL import Image
+import rembg
 
 # Establish standard logging protocol for the pipeline execution
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -52,7 +53,6 @@ def stage_1_dynamic_masking(pipeline: LegoReconstructionPipeline):
     Enforces COLMAP's strict filename.ext.png naming convention to guarantee
     feature extraction ignores static room geometry.
     """
-    import rembg
     logging.info("Initiating Stage 1: Neural Background Masking")
     
     # Initialize the rembg session (loads the U2-Net weights into system memory)

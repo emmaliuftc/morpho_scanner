@@ -52,9 +52,9 @@ def set_op_mode():
 def go_to_position(pos):
     packet_handler.write4ByteTxRx(port, MOTOR, 116, pos)
 
-def drop(n: int):
+def drop():
     position = get_position()
-    new_position = (position + n)
+    new_position = (position + 4096//32)
     go_to_position(new_position)
 
 def get_position():

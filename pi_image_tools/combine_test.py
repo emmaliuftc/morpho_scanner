@@ -42,10 +42,10 @@ print("Camera preview started. Press 'q' to exit.")
 
 try:
     for i in range(32):
-        motor_test.drop()
+        motor_test.drop(4096+128) # 4096/32
         time.sleep(2)
         image = picam.capture_array()
-        cv2.imwrite(f"./captures_7-18/capture_{i}.jpg", image)
+        cv2.imwrite(f"./captures_7-19/capture_{i}.jpg", image)
         print(f"{i} image added")
 finally:
     picam.stop()

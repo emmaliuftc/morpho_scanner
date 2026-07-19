@@ -40,6 +40,38 @@ def stage_2_sift_feature_extraction(pipeline: LegoReconstructionPipeline):
     # Instantiate database connection to verify extraction yields
     db = pycolmap.Database.open(str(pipeline.db_path))
     logging.info(f"Stage 2 Complete: Features securely written to database for {db.num_images()} images.")
+    
+    # Generate SIFT keypoint visualizations on the cleanly whitened images for all images
+    logging.info("Generating SIFT keypoint visualizations for all images...")
+    from PIL import Image, ImageDraw
+    from pathlib import Path
+    
+    vis_dir = pipeline.workspace / "visualizations"
+    vis_dir.mkdir(parents=True, exist_ok=True)
+    
+    images = db.read_all_images()
+    for img_entry in images:
+        img_id = img_entry.image_id
+        img_name = img_entry.name
+        
+        # Read keypoints from database
+        kpts = db.read_keypoints(img_id)
+        
+        # Load the whitened image
+        img_path = pipeline.image_dir / img_name
+        img = Image.open(img_path).convert("RGB")
+        draw = ImageDraw.Draw(img)
+        
+        for kp in kpts:
+            x, y = kp[0], kp[1]
+            r = 12
+            draw.ellipse((x - r, y - r, x + r, y + r), outline="red", width=3)
+            
+        # Naming format: sift_keypoints_{id}_clean_white_bg.jpg
+        base_name = Path(img_name).stem
+        vis_name = f"sift_keypoints_{base_name}_clean_white_bg.jpg"
+        img.save(vis_dir / vis_name)
+        logging.info(f"Saved visualization: {vis_name} ({len(kpts)} keypoints)")
 
 
 def main():

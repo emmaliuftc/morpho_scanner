@@ -105,21 +105,42 @@ def stage_1_dynamic_masking(pipeline: LegoReconstructionPipeline):
             # Fill holes to include the Lego block located inside the green plate
             filled_green_mask = ndimage.binary_fill_holes(plate_mask)
             
-            # NOTE: We keep the green mask code for reference. However, for textureless objects
-            # like the black Lego block, the wooden rim of the turntable provides critical
-            # texture anchors. Removing it causes the SfM camera loop to collapse.
-            # To restore tracking, we default to the rembg_binary mask.
-            final_mask = rembg_binary
-        else:
-            final_mask = rembg_binary
+            # A pixel belongs to the Lego block if it is inside the filled plate area and is NOT green
+            lego_mask = filled_green_mask & ~green_mask
             
-        mask_image = Image.fromarray(final_mask)
-        
-        # Save mask enforcing the precise COLMAP naming convention: filename.ext.png
+            # Clean up the Lego mask using morphological operations
+            lego_mask_clean = ndimage.binary_opening(lego_mask, structure=struct, iterations=1)
+            lego_mask_clean = ndimage.binary_closing(lego_mask_clean, structure=struct, iterations=2)
+        else:
+            # Fallback if green plate is not detected
+            lego_mask_clean = rembg_binary > 0
+            
+        # 1. Save mask enforcing the precise COLMAP naming convention: filename.ext.png
+        # (This forces SIFT to only look within the Lego block mask)
+        final_mask_np = (lego_mask_clean * 255).astype(np.uint8)
+        mask_image = Image.fromarray(final_mask_np)
         mask_filename = f"{img_path.name}.png"
         mask_path = pipeline.mask_dir / mask_filename
         mask_image.save(mask_path)
-        logging.info(f"Generated mask for {img_path.name} -> {mask_filename}")
+        
+        # 2. Apply CLAHE contrast enhancement to the Lego block area to boost features in shadows
+        img_float = img_np.astype(float) / 255.0
+        import skimage.exposure as exposure
+        clahe_r = exposure.equalize_adapthist(img_float[:, :, 0], kernel_size=128, clip_limit=0.02)
+        clahe_g = exposure.equalize_adapthist(img_float[:, :, 1], kernel_size=128, clip_limit=0.02)
+        clahe_b = exposure.equalize_adapthist(img_float[:, :, 2], kernel_size=128, clip_limit=0.02)
+        clahe_np = np.stack([clahe_r, clahe_g, clahe_b], axis=-1)
+        clahe_uint8 = (clahe_np * 255).astype(np.uint8)
+        
+        # 3. Whiten everything outside the Lego block in the copied active image
+        whitened_img_np = clahe_uint8.copy()
+        whitened_img_np[~lego_mask_clean] = [255, 255, 255]
+        
+        # Overwrite the image copied to target_img_path
+        whitened_image = Image.fromarray(whitened_img_np)
+        whitened_image.save(target_img_path)
+        
+        logging.info(f"Generated clean whitened image and mask for {img_path.name}")
         
     logging.info(f"Stage 1 Complete: {len(raw_images)} Binary masks generated successfully.")
 

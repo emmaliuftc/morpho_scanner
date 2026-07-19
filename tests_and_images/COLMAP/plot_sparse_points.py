@@ -4,42 +4,32 @@ import logging
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
-import pycolmap
+import open3d as o3d
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def generate_projections(workspace_dir: str):
     workspace = Path(workspace_dir)
-    sparse_model_dir = workspace / "sparse" / "0"
+    ply_path = workspace / "visualizations" / "sparse_model.ply"
     output_dir = workspace / "visualizations"
     output_dir.mkdir(exist_ok=True)
     
-    if not sparse_model_dir.exists():
-        logging.error(f"Sparse model directory not found at {sparse_model_dir}. Have you run Stage 4?")
+    if not ply_path.exists():
+        logging.error(f"Sparse PLY not found at {ply_path}.")
         sys.exit(1)
         
-    # Load the reconstruction
-    logging.info(f"Loading sparse reconstruction from {sparse_model_dir}...")
-    reconstruction = pycolmap.Reconstruction()
-    reconstruction.read(str(sparse_model_dir))
+    # Load the point cloud using Open3D
+    logging.info(f"Loading sparse points from {ply_path}...")
+    pcd = o3d.io.read_point_cloud(str(ply_path))
     
-    points_3d = reconstruction.points3D
-    if not points_3d:
-        logging.error("No 3D points found in the reconstruction.")
+    if not pcd.has_points():
+        logging.error("No 3D points found in the reconstruction PLY.")
         sys.exit(1)
         
-    logging.info(f"Loaded {len(points_3d)} 3D points. Extracting coordinates and colors...")
-    
-    # Extract XYZ and RGB colors
-    xyz = []
-    colors = []
-    for point in points_3d.values():
-        xyz.append(point.xyz)
-        # Normalize RGB to [0, 1] for matplotlib
-        colors.append(point.color / 255.0)
-        
-    xyz = np.array(xyz)
-    colors = np.array(colors)
+    xyz = np.asarray(pcd.points)
+    colors = np.asarray(pcd.colors)
+    num_points = len(xyz)
+    logging.info(f"Loaded {num_points} 3D points. Extracting coordinates and colors...")
     
     X = xyz[:, 0]
     Y = xyz[:, 1]
@@ -47,7 +37,7 @@ def generate_projections(workspace_dir: str):
     
     # Set up matplotlib figure (2x2 subplots)
     fig = plt.figure(figsize=(15, 12))
-    fig.suptitle(f"Sparse Point Cloud Projections ({len(points_3d)} points)", fontsize=16, fontweight='bold')
+    fig.suptitle(f"Sparse Point Cloud Projections ({num_points} points)", fontsize=16, fontweight='bold')
     
     # 1. 3D Perspective view
     ax1 = fig.add_subplot(2, 2, 1, projection='3d')

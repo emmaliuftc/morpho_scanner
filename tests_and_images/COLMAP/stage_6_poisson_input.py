@@ -31,9 +31,33 @@ def stage_6_poisson_input(pipeline: LegoReconstructionPipeline):
     initial_points = len(pcd.points)
     logging.info(f"Point cloud initialized from mesh vertices: {initial_points} points.")
     
+    # Cylinder filter based on derived turntable center to purge rim outliers
+    logging.info("Applying cylinder filter based on derived turntable center...")
+    import numpy as np
+    plate_center = np.array([0.8568, 1.5746, 2.7133])
+    normal = np.array([0.20758226, 0.71598242, 0.66654241]) # trajectory normal
+    
+    points = np.asarray(pcd.points)
+    V = points - plate_center
+    h = V @ normal
+    U = V - np.outer(h, normal)
+    r = np.linalg.norm(U, axis=1)
+    
+    # Keep only points within 0.8 units of center axis and above plate base
+    keep_mask = (r < 0.8) & (h < 0.2)
+    
+    filtered_pcd = o3d.geometry.PointCloud()
+    filtered_pcd.points = o3d.utility.Vector3dVector(points[keep_mask])
+    if mesh.has_vertex_colors():
+        filtered_pcd.colors = o3d.utility.Vector3dVector(np.asarray(pcd.colors)[keep_mask])
+    if mesh.has_vertex_normals():
+        filtered_pcd.normals = o3d.utility.Vector3dVector(np.asarray(pcd.normals)[keep_mask])
+        
+    logging.info(f"Points post-cylinder filter: {len(filtered_pcd.points)} (Purged {initial_points - len(filtered_pcd.points)} points)")
+    
     # 1. Statistical Outlier Removal (SOR)
     logging.info("Executing Statistical Outlier Removal (SOR)...")
-    cleaned_pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=40, std_ratio=1.5)
+    cleaned_pcd, ind = filtered_pcd.remove_statistical_outlier(nb_neighbors=40, std_ratio=1.5)
     filtered_points = len(cleaned_pcd.points)
     logging.info(f"Points post-SOR: {filtered_points} (Purged {initial_points - filtered_points} spatial anomalies)")
     

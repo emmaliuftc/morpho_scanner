@@ -42,3 +42,28 @@ Renders a 3D perspective surface plot of the Poisson reconstruction mesh in shad
 *   **Input Mesh:** `COLMAP/workspace/visualizations/poisson_mesh.ply`
 *   **Input Point Cloud:** `COLMAP/workspace/lego_block_final.ply`
 *   **Output Render Image:** `COLMAP/workspace/visualizations/lego_rendered_3d.png`
+
+---
+
+## 4. test_true_step_size.py
+Triangulates the point cloud of the Lego block using the theoretical motor step size of $11.25^\circ$ ($360^\circ / 32$) instead of the physical $10.0^\circ$ gear-ratio corrected step size. This serves as a comparison script to prove the existence of the turntable gear ratio.
+
+### How to Run:
+```bash
+.venv/bin/python tools/test_true_step_size.py
+```
+*   **Input Poses:** Analytical circular trajectory with $11.25^\circ$ increments
+*   **Input Images:** `COLMAP/workspace/images/`
+*   **Output Poses:** `COLMAP/workspace/sparse_ideal_triangulated/`
+
+---
+
+## 5. fit_gear_ratio.py
+Reads the actual 3D camera poses reconstructed by COLMAP in `sparse/1`, fits a circle to the camera centers using SVD plane projection, unwraps the camera rotation angles, and runs linear regression to fit the actual step size of the turntable (proving the $9:8$ gear ratio).
+
+### How to Run:
+```bash
+.venv/bin/python tools/fit_gear_ratio.py
+```
+*   **Input Reconstruction:** `COLMAP/workspace/sparse/1`
+*   **Output:** Prints the fitted rotation slope in radians and degrees, expected step size, and residual error.

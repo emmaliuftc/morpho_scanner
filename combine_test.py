@@ -33,7 +33,7 @@ picam.preview_configuration.align()
 picam.configure("preview")
 picam.start()
 
-picam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 6.0})
+picam.set_controls({"AfMode": controls.AfModeEnum.Manual, "LensPosition": 8.0})
             
 # Wait for the lens to mechanically settle
 time.sleep(0.4)
@@ -45,7 +45,7 @@ try:
         motor_test.drop(4096+128) # 4096/32
         time.sleep(2)
         image = picam.capture_array()
-        cv2.imwrite(f"./captures_7-19_lob_with_marker/capture_{i}.jpg", image)
+        cv2.imwrite(f"./captures_7-19_lob_with_marker_2/capture_{i}.jpg", image)
         print(f"{i} image added")
 finally:
     picam.stop()

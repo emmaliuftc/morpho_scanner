@@ -21,12 +21,16 @@ time.sleep(0.4)
 
 print("Camera preview started. Press 'q' to exit.")
 
+id=0
+
 try:
     while True:
         
         image = picam.capture_array()
         cv2.imwrite("scanned_output.jpg", image)
-        print("image saved!")
+        cv2.imwrite("checkboard/image_%d.jpg"%id, image)
+        id += 1
+        print("image %d saved!"%id)
         time.sleep(0.5)
         if cv2.waitKey(1) == ord('q'):
             break

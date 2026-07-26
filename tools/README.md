@@ -67,3 +67,58 @@ Reads the actual 3D camera poses reconstructed by COLMAP in `sparse/1`, fits a c
 ```
 *   **Input Reconstruction:** `COLMAP/workspace/sparse/1`
 *   **Output:** Prints the fitted rotation slope in radians and degrees, expected step size, and residual error.
+
+---
+
+## 6. nerf.py
+Reads calibration data and turntable centers, computes camera-to-world (c2w) matrices with turntable rotation, and outputs a formatted `transforms.json` dataset directory for training Nerfstudio models.
+*(Note: Corrected rotation uses `+angle_rad * normal_up` to orbit in the correct turntable direction).*
+
+### How to Run:
+```bash
+.venv_nerf/bin/python tools/nerf.py
+```
+*   **Output Folder**: `captures_7-25_nerf_dataset/`
+
+---
+
+## 7. ns-train (NeRF Training)
+Trains a Nerfstudio model. To keep the silhouette masks active for small foreground regions (4.9% image area), the max-num-iterations of the rejection sampler is set to 1000.
+
+### How to Run:
+```bash
+.venv_nerf/bin/ns-train nerfacto \
+  --data captures_7-25_nerf_dataset/transforms_8.json \
+  --machine.device-type cpu \
+  --max-num-iterations 400 \
+  --pipeline.datamanager.train-num-rays-per-batch 1024 \
+  --pipeline.datamanager.pixel-sampler.rejection-sample-mask True \
+  --pipeline.datamanager.pixel-sampler.max-num-iterations 1000 \
+  --viewer.quit-on-train-completion True \
+  nerfstudio-data --center-method none --orientation-method none --auto-scale-poses False
+```
+
+---
+
+## 8. filter_pcd_by_masks.py
+A vectorized visual hull consistency filtering script. Projects the exported point cloud back onto all 32 camera frames and retains only points that project inside the 2D foreground masks.
+
+### How to Run:
+```bash
+.venv_nerf/bin/python tools/filter_pcd_by_masks.py
+```
+*   **Input**: `captures_7-25_nerf_dataset/point_cloud.ply`
+*   **Output**: `captures_7-25_nerf_dataset/point_cloud_filtered.ply`
+
+---
+
+## 9. poisson_mesh_and_project.py
+Builds a clean 3D triangle mesh from the filtered point cloud using Open3D's Poisson surface reconstruction and generates overlay images showing the mesh wireframe projected back onto the original high-resolution captures.
+
+### How to Run:
+```bash
+.venv_nerf/bin/python tools/poisson_mesh_and_project.py
+```
+*   **Output Mesh**: `captures_7-25_nerf_dataset/mesh.ply`
+*   **Output Overlays**: `captures_7-25_nerf_dataset/mesh_projection_*.jpg`
+

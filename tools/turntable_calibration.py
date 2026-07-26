@@ -116,8 +116,8 @@ def calibrate_turntable_trajectory(images, K_cal, DIST_cal, fallback_C_rot=None,
     normal, u, v = get_axes(el, az)
     C_rot = mean_t + uc * u + vc * v
     
-    # Constrain C_rot to turntable surface plane Z=0
-    offset = np.dot(p0x - C_rot[0], normal)
+    p0 = np.array([p0x, p0y, p0z])
+    offset = np.dot(p0 - C_rot, normal)
     C_rot_planar = C_rot + offset * normal
     
     print("\nTurntable calibration successful!")

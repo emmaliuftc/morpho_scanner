@@ -45,6 +45,7 @@ frozendict @ file:///work/perseverance-python-buildout/croot/frozendict_17284975
 h11==0.16.0
 idna @ file:///work/perseverance-python-buildout/croot/idna_1728385935861/work
 ImageIO==2.37.3
+imageio-ffmpeg==0.6.0
 imagesize==2.0.0
 ipykernel==7.3.0
 ipython==9.15.0

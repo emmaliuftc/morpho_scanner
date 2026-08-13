@@ -17,12 +17,14 @@ def run_0726_rerun():
 
     DATASET_DIR = "captures_0726_nerf_dataset"
     TRANSFORMS_FILE = os.path.join(DATASET_DIR, "transforms_8.json")
+    CLAY_CALIB_DIR = "/home/coding/github/morpho_scanner/captures_0726_clay_checkboard_64_calibrated"
     RERUN_OUT_DIR = "/home/coding/github/morpho_scanner/0813_0726_cerf_rerun"
     os.makedirs(RERUN_OUT_DIR, exist_ok=True)
 
     timestamp_str = time.strftime("%Y-%m-%d_%H%M%S")
-    print(f"🚀 Starting 2000-Step NeRF GPU Re-run for dataset {DATASET_DIR}...")
+    print(f"🚀 Starting 2000-Step GPU NeRF Re-run for 0726 Clay Lobes Dataset...")
     print(f"   Transforms File: {TRANSFORMS_FILE}")
+    print(f"   Clay Calibration Reference: {CLAY_CALIB_DIR}")
     print(f"   Output Directory: {RERUN_OUT_DIR}")
     print(f"   Timestamp: {timestamp_str}")
 
@@ -46,12 +48,16 @@ def run_0726_rerun():
         "--eval-mode", "all"
     ]
 
-    print(f"\nExecuting GPU Training Command:\n{' '.join(cmd_train)}\n")
-    res = subprocess.run(cmd_train, capture_output=True, text=True)
-    print("Training Output Summary:")
-    print(res.stdout[-1500:] if res.stdout else "")
-    if res.returncode != 0:
-        print(f"Warning / Error Output:\n{res.stderr[-1500:]}")
+    print(f"\nExecuting GPU Training Command:\n{' '.join(cmd_train)}\n", flush=True)
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    env["FORCE_COLOR"] = "0"
+    
+    proc = subprocess.Popen(cmd_train, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env, bufsize=1)
+    for line in iter(proc.stdout.readline, ''):
+        sys.stdout.write(line)
+        sys.stdout.flush()
+    proc.wait()
 
     # Locate config.yml
     config_files = glob.glob(os.path.join(RERUN_OUT_DIR, "**", "config.yml"), recursive=True)
@@ -60,7 +66,6 @@ def run_0726_rerun():
         return
 
     config_yaml = sorted(config_files)[-1]
-    model_dir = os.path.dirname(config_yaml)
     print(f"\n✅ Config found: {config_yaml}")
 
     # Export Point Cloud PLY to 0813_0726_cerf_rerun/point_cloud.ply
@@ -71,7 +76,7 @@ def run_0726_rerun():
         "--num-points", "10000",
         "--remove-outliers", "True"
     ]
-    print("\n📦 Exporting 3D Point Cloud on GPU...")
+    print("\n📦 Exporting 0726 Clay Lobes 3D Point Cloud on GPU...")
     subprocess.run(cmd_export_pcd, capture_output=True, text=True)
 
     # Locate exported point cloud PLY
@@ -123,7 +128,7 @@ def run_0726_rerun():
     ax.set_xlim(vertices[:, 0].min(), vertices[:, 0].max())
     ax.set_ylim(vertices[:, 1].min(), vertices[:, 1].max())
     ax.set_zlim(vertices[:, 2].min(), vertices[:, 2].max())
-    ax.set_title("0813 GPU NeRF Rerun: Reconstructed Solid 3D Mesh (2000 Steps)", color='white', fontsize=14, pad=15)
+    ax.set_title("0726 Clay Lobes: Reconstructed Solid 3D Mesh (2000 Steps)", color='white', fontsize=14, pad=15)
     ax.set_xlabel("X (mm)", color='white')
     ax.set_ylabel("Y (mm)", color='white')
     ax.set_zlabel("Z (mm)", color='white')
@@ -138,8 +143,8 @@ def run_0726_rerun():
     plt.close()
     print(f"✅ Saved 3D Mesh Preview: {preview_img}")
 
-    # Generate keyframe projection overlays on capture_00, capture_16, capture_32, capture_48
-    CALIB_REF = os.path.join("captures_0810_cube_calibrated", "calibration_results.json")
+    # Generate keyframe projection overlays on 0726 Clay Lobes images (capture_0, 16, 32, 48)
+    CALIB_REF = os.path.join(CLAY_CALIB_DIR, "calibration_results.json")
     if os.path.exists(CALIB_REF):
         with open(CALIB_REF, "r") as f:
             cal_data = json.load(f)
@@ -158,7 +163,7 @@ def run_0726_rerun():
         from scipy.spatial.transform import Rotation as Rot
 
         for idx in [0, 16, 32, 48]:
-            img_path = os.path.join("captures_0810_cube_calibrated", f"capture_{idx}.jpg")
+            img_path = os.path.join(CLAY_CALIB_DIR, f"capture_{idx}.jpg")
             if not os.path.exists(img_path):
                 img_path = os.path.join(DATASET_DIR, f"capture_{idx}.png")
             if not os.path.exists(img_path):
@@ -172,7 +177,7 @@ def run_0726_rerun():
             angle_rad = np.deg2rad(angle_deg)
             R_i = Rot.from_rotvec(-angle_rad * np.array([0, 0, 1.0])).as_matrix()
 
-            pts_opt = pts + np.array([-35.0, -12.0, 20.0])
+            pts_opt = pts
             pts_rot = R_i @ pts_opt.T
             cam_pts = (R_cam @ pts_rot) + C_rot.reshape(3, 1)
             zc = cam_pts[2, :]
@@ -182,13 +187,13 @@ def run_0726_rerun():
             valid = (zc > 10.0) & (u >= 0) & (u < w_img) & (v >= 0) & (v < h_img)
 
             for pu, pv in zip(u[valid][::2], v[valid][::2]):
-                cv2.circle(vis, (pu, pv), 2, (255, 255, 0), -1, cv2.LINE_AA)
+                cv2.circle(vis, (pu, pv), 2, (0, 255, 255), -1, cv2.LINE_AA)
 
             out_proj = os.path.join(RERUN_OUT_DIR, f"mesh_projection_{idx:02d}.jpg")
             cv2.imwrite(out_proj, vis)
-            print(f"✅ Saved projection overlay to {out_proj}")
+            print(f"✅ Saved 0726 Clay Lobes projection overlay to {out_proj}")
 
-    print(f"\n🎉 2000-Step GPU NeRF Rerun successfully completed in {RERUN_OUT_DIR}!")
+    print(f"\n🎉 2000-Step 0726 Clay Lobes GPU NeRF Rerun successfully completed in {RERUN_OUT_DIR}!")
 
 if __name__ == '__main__':
     run_0726_rerun()

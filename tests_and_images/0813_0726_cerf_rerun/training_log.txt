@@ -1,0 +1,42 @@
+🚀 Starting 2000-Step NeRF GPU Re-run for dataset captures_0726_nerf_dataset...
+   Transforms File: captures_0726_nerf_dataset/transforms_8.json
+   Output Directory: /home/coding/github/morpho_scanner/0813_0726_cerf_rerun
+   Timestamp: 2026-08-13_175130
+
+Executing GPU Training Command:
+.venv_nerf/bin/ns-train nerfacto --data captures_0726_nerf_dataset/transforms_8.json --output-dir /home/coding/github/morpho_scanner/0813_0726_cerf_rerun --max-num-iterations 2000 --steps-per-save 500 --vis tensorboard --machine.device-type cuda nerfstudio-data --data captures_0726_nerf_dataset --eval-mode all
+
+Training Output Summary:
+  367.972 ms           14 s, 718.884 ms     12.28 K               
+1970 (98.50%)       367.229 ms           11 s, 16.871 ms      12.29 K               
+1980 (99.00%)       367.651 ms           7 s, 353.029 ms      12.29 K               
+1990 (99.50%)       367.492 ms           3 s, 674.921 ms      12.29 K               
+1999 (99.95%)                                                                       
+╭────────────────────────────────────────────── 🎉 Training Finished 🎉 ───────────────────────────────────────────────╮
+│                        ╷                                                                                             │
+│   Config File          │ /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/captures_0726_nerf_dataset/nerfa…   │
+│   Checkpoint Directory │ /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/captures_0726_nerf_dataset/nerfa…   │
+│                        ╵                                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Printing profiling stats, from longest to shortest duration in seconds
+VanillaPipeline.get_eval_image_metrics_and_images: 5.9443              
+Trainer.train_iteration: 0.3582              
+VanillaPipeline.get_eval_loss_dict: 0.1773              
+VanillaPipeline.get_train_loss_dict: 0.1217              
+Trainer.eval_iteration: 0.0092              
+
+
+✅ Config found: /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/captures_0726_nerf_dataset/nerfacto/2026-08-13_175137/config.yml
+
+📦 Exporting 3D Point Cloud on GPU...
+✅ Extracted Point Cloud: 81 points
+[Open3D WARNING] Write OBJ can not include triangle normals.
+✅ Saved Solid Watertight 3D Mesh: /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/mesh.ply
+✅ Saved STL 3D Mesh: /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/mesh.stl
+✅ Saved 3D Mesh Preview: /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/nerf_mesh_3d_preview.png
+✅ Saved projection overlay to /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/mesh_projection_00.jpg
+✅ Saved projection overlay to /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/mesh_projection_16.jpg
+✅ Saved projection overlay to /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/mesh_projection_32.jpg
+✅ Saved projection overlay to /home/coding/github/morpho_scanner/0813_0726_cerf_rerun/mesh_projection_48.jpg
+
+🎉 2000-Step GPU NeRF Rerun successfully completed in /home/coding/github/morpho_scanner/0813_0726_cerf_rerun!

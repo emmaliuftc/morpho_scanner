@@ -52,7 +52,7 @@ echo "Running tightly cropped point cloud export..."
     --remove-outliers True \
     --normal-method open3d \
     --obb-center 0.0 0.0 0.0 \
-    --obb-scale 3.33 3.33 3.33 \
+    --obb-scale 1.0 1.0 1.0 \
     --obb-rotation 0.0 0.0 0.0
 
 echo ""
@@ -63,6 +63,14 @@ echo "========================================="
     --input exports/three_flat_pc_cropped/point_cloud.ply \
     --output exports/three_flat_pc_cropped/point_cloud_filtered.ply
 
+echo ""
 echo "========================================="
-echo "Pipeline complete! Final filtered mesh saved to exports/three_flat_pc_cropped/point_cloud_filtered.ply"
+echo "4. Creating Poisson Surface Mesh"
+echo "========================================="
+.venv_nerf/bin/python tools/nerf/create_mesh.py \
+    --input exports/three_flat_pc_cropped/point_cloud_filtered.ply \
+    --output exports/three_flat_pc_cropped/mesh.ply
+
+echo "========================================="
+echo "Pipeline complete! Saved to exports/three_flat_pc_cropped/mesh.ply"
 echo "========================================="

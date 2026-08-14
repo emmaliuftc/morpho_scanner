@@ -53,8 +53,8 @@ PREV_DIST = np.array([-0.44031736, 7.83951075, 0.0, 0.0, -43.24147593])
 # Empirically measured offset of M6 relative to M0 (optimized via
 # reprojection error minimization across all 64 frames using the
 # previous calibration K).
-M6_OFFSET_X = 20.51  # mm
-M6_OFFSET_Y = 20.74  # mm
+M6_OFFSET_X = 20.7254  # mm (Actually M20)
+M6_OFFSET_Y = 20.2022  # mm
 
 def make_board_obj_pts():
     """3D coordinates of both markers (board frame, Z=0 plane)."""
@@ -236,7 +236,7 @@ def estimate_per_frame_poses(detections, K, dist):
         img_all = np.vstack(img_f)
 
         ok, rvec, tvec = cv2.solvePnP(obj_all, img_all, K, dist)
-        if ok and tvec.ravel()[2] > 0:
+        if ok and tvec.ravel()[2] > 0 and len(obj_all) == 8:
             poses[idx] = (rvec.ravel(), tvec.ravel(), len(obj_all))
 
     return poses

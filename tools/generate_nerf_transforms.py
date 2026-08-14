@@ -15,10 +15,6 @@ def get_c2w_matrices(calibration_json_path: str, scale: float = 1.0):
     normal = np.array(calib['plate_normal'])
     normal = normal / np.linalg.norm(normal)
     
-    # Enforce normal to always point towards the camera (negative Z)
-    if normal[2] > 0:
-        normal = -normal
-    
     # Base setup (EXACTLY mirroring prepare_nerf_0726.py)
     ref = np.array([1.0, 0.0, 0.0])
     x_col = ref - np.dot(ref, normal) * normal

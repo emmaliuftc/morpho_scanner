@@ -39,7 +39,7 @@ def convert_to_mask(img_path):
     return True
 
 def main():
-    mask_dir = "/home/coding/github/morpho_scanner/optimization_0813/masks"
+    mask_dir = "/home/coding/github/morpho_scanner/optimization_0813_three_lobs/masks"
     
     image_paths = sorted(glob.glob(os.path.join(mask_dir, "*.png")))
     # Exclude preview masks if they accidentally got here

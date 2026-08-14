@@ -4,8 +4,8 @@ import json
 import numpy as np
 from scipy.spatial.transform import Rotation as Rot
 
-INPUT_DIR = "captures_0726_clay_checkboard_64_calibrated"
-OUTPUT_DIR = "optimization_0813"
+INPUT_DIR = "captures_8-13_three_flat_calibrated"
+OUTPUT_DIR = "optimization_0813_three_flat"
 MESH_STAGE3 = os.path.join(OUTPUT_DIR, "sh_parameterized_surface.obj")
 MESH_STAGE4 = os.path.join(OUTPUT_DIR, "sh_parameterized_surface_refined.obj")
 

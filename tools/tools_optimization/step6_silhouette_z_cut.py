@@ -8,14 +8,14 @@ import torch.nn.functional as F
 from scipy.special import sph_harm_y
 from scipy.spatial.transform import Rotation as Rot
 
-INPUT_DIR = "captures_0726_clay_checkboard_64_calibrated"
-MASKS_DIR = "optimization_0813/masks"
-OUTPUT_DIR = "optimization_0813"
+INPUT_DIR = "captures_8-13_three_flat_calibrated"
+MASKS_DIR = "optimization_0813_three_flat/masks"
+OUTPUT_DIR = "optimization_0813_three_flat"
 
 GRID_SIZE_MM = 120.0
-MAX_DEGREE = 15
-NUM_SAMPLES_THETA = 60
-NUM_SAMPLES_PHI = 120
+MAX_DEGREE = 30
+NUM_SAMPLES_THETA = 150
+NUM_SAMPLES_PHI = 300
 N_CAMERAS = 64
 
 def load_calibration():

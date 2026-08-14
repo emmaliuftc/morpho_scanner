@@ -5,12 +5,12 @@ from scipy.special import sph_harm_y
 from skimage import measure
 import matplotlib.pyplot as plt
 
-OUTPUT_DIR = "optimization_0813"
+OUTPUT_DIR = "optimization_0813_three_flat"
 GRID_RESOLUTION = 256
 GRID_SIZE_MM = 120.0
-MAX_DEGREE = 15 # SH max degree L
-NUM_SAMPLES_THETA = 100
-NUM_SAMPLES_PHI = 200
+MAX_DEGREE = 30 # SH max degree L
+NUM_SAMPLES_THETA = 150
+NUM_SAMPLES_PHI = 300
 
 def real_sph_harm(l, m, theta, phi):
     """
@@ -132,8 +132,8 @@ def main():
     # Reconstruct surface from SH parameters for verification
     print("Reconstructing mathematical surface from parameters...")
     # Generate high-res mesh
-    theta_mesh = np.linspace(0, np.pi, 100)
-    phi_mesh = np.linspace(0, 2*np.pi, 200)
+    theta_mesh = np.linspace(0, np.pi, 150)
+    phi_mesh = np.linspace(0, 2*np.pi, 300)
     tm, pm = np.meshgrid(theta_mesh, phi_mesh, indexing='ij')
     
     Y_mesh = get_basis_matrix(MAX_DEGREE, tm.ravel(), pm.ravel())

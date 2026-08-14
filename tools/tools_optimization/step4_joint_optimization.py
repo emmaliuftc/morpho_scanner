@@ -5,12 +5,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy.special import sph_harm_y
 
-OUTPUT_DIR = "optimization_0813"
+OUTPUT_DIR = "optimization_0813_three_flat"
 GRID_RESOLUTION = 256
 GRID_SIZE_MM = 120.0
-MAX_DEGREE = 15
-NUM_SAMPLES_THETA = 60
-NUM_SAMPLES_PHI = 120
+MAX_DEGREE = 30
+NUM_SAMPLES_THETA = 150
+NUM_SAMPLES_PHI = 300
 
 def real_sph_harm(l, m, theta, phi):
     Y = sph_harm_y(l, abs(m), theta, phi)

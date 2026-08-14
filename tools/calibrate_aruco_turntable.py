@@ -31,8 +31,8 @@ from pathlib import Path
 # ==========================================
 #  CONFIGURATION
 # ==========================================
-IMAGES_FOLDER = "captures_0726_clay_checkboard_64"
-OUTPUT_FOLDER = "captures_0726_clay_checkboard_64_calibrated"
+IMAGES_FOLDER = "captures_8-13_three_flat"
+OUTPUT_FOLDER = "captures_8-13_three_flat_calibrated"
 MARKER_SIZE_MM = 15.0       # Physical side length of each ArUco marker
 ARUCO_DICT_ID = cv2.aruco.DICT_4X4_50
 N_IMAGES = 64
@@ -69,7 +69,7 @@ def make_board_obj_pts():
         [ox, oy, 0], [ox+s, oy, 0], [ox+s, oy+s, 0], [ox, oy+s, 0],
     ], dtype=np.float32)
 
-    return {0: m0, 6: m6}
+    return {14: m0, 20: m6}
 
 
 # ==========================================
@@ -144,7 +144,7 @@ def calibrate_camera(detections, image_shape):
     for idx in sorted(detections.keys()):
         markers = detections[idx]
         obj_f, img_f = [], []
-        for mid in [0, 6]:
+        for mid in [14, 20]:
             if mid in markers:
                 obj_f.append(board_pts[mid])
                 img_f.append(markers[mid].astype(np.float32))
@@ -166,6 +166,10 @@ def calibrate_camera(detections, image_shape):
         ("Individual markers (128 views)", objpoints_ind, imgpoints_ind),
         ("Board model (64 views)", objpoints_brd, imgpoints_brd),
     ]:
+        if len(objp) == 0:
+            print(f"\n  Skipping {label} (0 views available)")
+            continue
+            
         ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
             objp, imgp, image_shape,
             PREV_K.copy(), PREV_DIST.reshape(1, 5).copy(),
@@ -182,6 +186,9 @@ def calibrate_camera(detections, image_shape):
         results[label] = (K, dist, mean_err, len(objp), tot_pts)
         print(f"\n  {label}:")
         print(f"    fx = {K[0,0]:.4f}   reproj = {mean_err:.4f} px")
+
+    if not results:
+        raise RuntimeError("No markers detected for calibration.")
 
     # Pick approach with lower reprojection error
     best_label = min(results, key=lambda k: results[k][2])
@@ -217,7 +224,7 @@ def estimate_per_frame_poses(detections, K, dist):
     for idx in sorted(detections.keys()):
         markers = detections[idx]
         obj_f, img_f = [], []
-        for mid in [0, 6]:
+        for mid in [14, 20]:
             if mid in markers:
                 obj_f.append(board_pts[mid])
                 img_f.append(markers[mid].astype(np.float64))
@@ -488,7 +495,8 @@ def render_visualizations(images, K, dist, C_rot, normal, step_deg):
                     cv2.FONT_HERSHEY_SIMPLEX, 1.3, (255, 255, 0), 2, cv2.LINE_AA)
 
         out_path = os.path.join(OUTPUT_FOLDER, os.path.basename(img_path))
-        cv2.imwrite(out_path, img)
+        orig_img = cv2.imread(img_path) # Load clean image
+        cv2.imwrite(out_path, orig_img) # Save clean image so masks don't get ruined by red arrows
 
     print(f"  Saved {len(images)} annotated images -> {OUTPUT_FOLDER}/")
 
@@ -565,7 +573,7 @@ def main():
         "n_images": N_IMAGES,
         "marker_size_mm": MARKER_SIZE_MM,
         "aruco_dictionary": "DICT_4X4_50",
-        "marker_ids": [0, 6],
+        "marker_ids": [14, 20],
         "board_offset_mm": [M6_OFFSET_X, M6_OFFSET_Y],
         "image_resolution": list(image_shape),
     }

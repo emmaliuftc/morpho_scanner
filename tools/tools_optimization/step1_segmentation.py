@@ -10,8 +10,8 @@ sys.path.append("tools")
 from silhouette_extractor import SilhouetteExtractor
 
 def main():
-    input_dir = "captures_0726_clay_checkboard_64_calibrated"
-    output_dir = "optimization_0813/masks"
+    input_dir = "captures_8-13_three_flat_calibrated"
+    output_dir = "optimization_0813_three_flat/masks"
     calib_json_path = os.path.join(input_dir, "calibration_results.json")
     
     os.makedirs(output_dir, exist_ok=True)
@@ -44,7 +44,7 @@ def main():
         # In the 0726 run, we cached masks in the TSDF directory. We can reuse them to save 10+ minutes!
         cached_mask_path = os.path.join("captures_0726_clay_checkboard_64_tsdf/masks", out_mask_name)
         
-        if os.path.exists(cached_mask_path):
+        if "0726" in input_dir and os.path.exists(cached_mask_path):
             # Just copy the perfectly cached mask (it is already undistorted and isolated)
             mask = cv2.imread(cached_mask_path, cv2.IMREAD_GRAYSCALE)
             cv2.imwrite(out_mask_path, mask)
@@ -58,7 +58,7 @@ def main():
         if (idx + 1) % 10 == 0 or idx == len(image_paths) - 1:
             print(f"Processed {idx+1}/{len(image_paths)} masks")
             
-    print("Step 1 Segmentation complete. All masks saved to optimization_0813/masks/")
+    print("Step 1 Segmentation complete. All masks saved to optimization_0813_three_lobs/masks/")
 
 if __name__ == "__main__":
     main()

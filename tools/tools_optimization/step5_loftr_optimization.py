@@ -15,13 +15,13 @@ except ImportError:
     print("Please install kornia first.")
     exit(1)
 
-INPUT_DIR = "captures_0726_clay_checkboard_64_calibrated"
-OUTPUT_DIR = "optimization_0813"
+INPUT_DIR = "captures_8-13_three_flat_calibrated"
+OUTPUT_DIR = "optimization_0813_three_flat"
 GRID_RESOLUTION = 256
 GRID_SIZE_MM = 120.0
-MAX_DEGREE = 15
-NUM_SAMPLES_THETA = 60
-NUM_SAMPLES_PHI = 120
+MAX_DEGREE = 30
+NUM_SAMPLES_THETA = 150
+NUM_SAMPLES_PHI = 300
 
 def load_calibration():
     calib_json_path = os.path.join(INPUT_DIR, "calibration_results.json")
@@ -196,8 +196,8 @@ class Phase5Optimizer(nn.Module):
         # 2. LoFTR Feature Keypoint Loss
         # The predicted radius at the LoFTR angles
         r_pred = torch.matmul(self.Y_mat_loftr, self.coeffs)
-        # Minimize the difference between predicted SH radius and triangulated 3D radius
-        loss_loftr = torch.mean((r_pred - self.r_true)**2)
+        # Minimize difference using Huber Loss (smooth L1) which is robust to outliers!
+        loss_loftr = F.smooth_l1_loss(r_pred, self.r_true, beta=2.0)
         
         # 3. Laplacian Regularization
         loss_lap = torch.sum(self.lap_weights * (self.coeffs**2))
@@ -239,11 +239,22 @@ def main():
         PB, _, _ = get_projection_matrix(K_cal, C_rot, normal, step_size_deg, i+4)
         
         pts3D_local = triangulate_points(PA, PB, mkptsA, mkptsB)
-        dist_to_centroid = np.linalg.norm(pts3D_local - centroid, axis=1)
-        valid_mask = dist_to_centroid < 60.0
+        
+        # Build SDT interpolator once to filter out bad triangulations
+        if 'sdt_interp' not in locals():
+            from scipy.interpolate import RegularGridInterpolator
+            vx = np.linspace(-GRID_SIZE_MM/2, GRID_SIZE_MM/2, GRID_RESOLUTION)
+            vy = np.linspace(-GRID_SIZE_MM/2, GRID_SIZE_MM/2, GRID_RESOLUTION)
+            vz = np.linspace(45.0 - GRID_SIZE_MM/2, 45.0 + GRID_SIZE_MM/2, GRID_RESOLUTION)
+            sdt_interp = RegularGridInterpolator((vx, vy, vz), sdt_mm, bounds_error=False, fill_value=100.0)
+            
+        sdt_vals = sdt_interp(pts3D_local)
+        
+        # A valid point MUST be within 5.0mm of the silhouette boundary!
+        valid_mask = np.abs(sdt_vals) < 5.0
         
         valid_pts = pts3D_local[valid_mask]
-        print(f"Pair ({i}, {i+4}): Retained {len(valid_pts)} 3D points.")
+        print(f"Pair ({i}, {i+4}): Retained {len(valid_pts)} 3D points (Filtered using SDT).")
         all_valid_pts3D.append(valid_pts)
         
     if not all_valid_pts3D:

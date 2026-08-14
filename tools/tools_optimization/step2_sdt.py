@@ -7,9 +7,9 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.spatial.transform import Rotation as Rot
 
 # Config
-INPUT_DIR = "captures_0726_clay_checkboard_64_calibrated"
-MASKS_DIR = "optimization_0813/masks"
-OUTPUT_DIR = "optimization_0813"
+INPUT_DIR = "captures_8-13_three_flat_calibrated"
+MASKS_DIR = "optimization_0813_three_flat/masks"
+OUTPUT_DIR = "optimization_0813_three_flat"
 GRID_RESOLUTION = 256
 GRID_SIZE_MM = 120.0
 
@@ -136,10 +136,13 @@ def main():
     # Normalize for visualization (blue = inside, red = outside)
     import matplotlib.pyplot as plt
     plt.figure(figsize=(8,8))
-    plt.imshow(slice_2d, cmap='coolwarm', origin='lower')
-    plt.contour(slice_2d, levels=[0], colors='black', linewidths=2) # Draw the zero-level set (surface)
+    img = plt.imshow(slice_2d, cmap='coolwarm', origin='lower')
+    try:
+        plt.contour(slice_2d, levels=[0], colors='black', linewidths=2) # Draw the zero-level set (surface)
+    except:
+        pass
     plt.title(f"SDT Cross Section (Z = {z[mid_z]:.2f} mm)\nBlack Line = Implicit Surface")
-    plt.colorbar(label="Distance to surface (mm)")
+    plt.colorbar(img, label="Distance to surface (mm)")
     plt.savefig(os.path.join(OUTPUT_DIR, "sdt_slice_preview.png"))
     print(f"Saved SDT slice visualization to {OUTPUT_DIR}/sdt_slice_preview.png")
 

@@ -35,8 +35,10 @@ def main():
     
     images_out = os.path.join(args.out_dir, f"images_{args.scale}")
     masks_out = os.path.join(args.out_dir, f"masks_{args.scale}")
+    masked_images_out = os.path.join(args.out_dir, f"masked_images_preview_{args.scale}")
     os.makedirs(images_out, exist_ok=True)
     os.makedirs(masks_out, exist_ok=True)
+    os.makedirs(masked_images_out, exist_ok=True)
     
     extractor = SilhouetteExtractor()
     
@@ -52,8 +54,9 @@ def main():
         
         out_img = os.path.join(images_out, f"{stem}.png")
         out_mask = os.path.join(masks_out, f"mask_{stem}.png")
+        out_masked_preview = os.path.join(masked_images_out, f"preview_{stem}.jpg")
         
-        if os.path.exists(out_img) and os.path.exists(out_mask):
+        if os.path.exists(out_img) and os.path.exists(out_mask) and os.path.exists(out_masked_preview):
             continue
             
         print(f"Processing {i+1}/{len(images)}: {basename}")
@@ -69,8 +72,12 @@ def main():
         img_small = cv2.resize(img_undist, (new_w, new_h), interpolation=cv2.INTER_AREA)
         mask_small = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
         
+        # Apply mask for visual preview
+        masked_img_small = cv2.bitwise_and(img_small, img_small, mask=mask_small)
+        
         cv2.imwrite(out_img, img_small)
         cv2.imwrite(out_mask, mask_small)
+        cv2.imwrite(out_masked_preview, masked_img_small)
 
 if __name__ == "__main__":
     main()

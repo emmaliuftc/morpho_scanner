@@ -52,12 +52,26 @@ def main():
         import pymeshlab
         ms = pymeshlab.MeshSet()
         ms.load_new_mesh(args.output)
+        
+        # Repair non-manifold geometry before trying to close holes
+        try:
+            ms.meshing_repair_non_manifold_edges()
+            ms.meshing_repair_non_manifold_vertices()
+        except Exception as e:
+            print(f"Warning: Non-manifold repair failed: {e}")
+            
         # Close holes up to a reasonably large size (e.g. 1000 edges)
-        ms.meshing_close_holes(maxholesize=1000)
+        try:
+            ms.meshing_close_holes(maxholesize=1000)
+        except Exception as e:
+            print(f"Warning: Hole closing failed: {e}")
+            
         ms.save_current_mesh(args.output)
         print("Hole filling complete!")
     except ImportError:
         print("pymeshlab not found, skipping hole filling step.")
+    except Exception as e:
+        print(f"An unexpected error occurred during hole filling: {e}")
         
     print("Done!")
 

@@ -10,7 +10,7 @@ fi
 RAW_DIR=$1
 GOLDEN_CALIB=$2
 STEPS=2000
-STOP_AFTER=7
+STOP_AFTER=8
 
 shift 2
 while [[ $# -gt 0 ]]; do
@@ -195,6 +195,37 @@ if [ "$STOP_AFTER" -ge 7 ]; then
         --output "${SESSION_DIR}/mesh_obb.ply"
         
     echo "- [x] Step 7: Generated Poisson meshes" >> "$PROGRESS_FILE"
+fi
+
+if [ "$STOP_AFTER" -ge 8 ]; then
+    # Step 8: Generate Orbiting GIFs
+    echo "[Step 8] Generating Orbiting GIFs for all Point Clouds and Meshes..."
+    
+    # Render Point Clouds
+    for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply" "${SESSION_DIR}/pointcloud_filtered_full.ply" "${SESSION_DIR}/pointcloud_filtered_obb.ply"; do
+        if [ -f "$ply" ]; then
+            out_mp4="${ply%.ply}.mp4"
+            out_gif="${ply%.ply}.gif"
+            echo " -> Rendering Point Cloud Video: $ply"
+            $PYTHON_ENV tools/render_pointcloud_video.py --ply "$ply" --out "$out_mp4"
+            ffmpeg -v quiet -stats -i "$out_mp4" -vf "fps=15,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -y -loop 0 "$out_gif"
+            rm "$out_mp4"
+        fi
+    done
+
+    # Render Meshes
+    for ply in "${SESSION_DIR}/mesh_full.ply" "${SESSION_DIR}/mesh_obb.ply"; do
+        if [ -f "$ply" ]; then
+            out_mp4="${ply%.ply}.mp4"
+            out_gif="${ply%.ply}.gif"
+            echo " -> Rendering Mesh Video: $ply"
+            $PYTHON_ENV tools/render_mesh_video.py --ply "$ply" --out "$out_mp4"
+            ffmpeg -v quiet -stats -i "$out_mp4" -vf "fps=15,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -y -loop 0 "$out_gif"
+            rm "$out_mp4"
+        fi
+    done
+    
+    echo "- [x] Step 8: Generated Orbiting GIFs" >> "$PROGRESS_FILE"
 fi
 
 echo "Pipeline script finished!"

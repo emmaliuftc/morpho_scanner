@@ -22,16 +22,20 @@ def fill_25d_extrusion(ply_path, out_ply_path, pitch=0.002):
     
     idxs = np.floor((points - min_bound) / pitch).astype(int)
     
-    print("Auto-detecting orientation and table floor plane...")
-    hist, bins = np.histogram(idxs[:, 2], bins=50)
-    max_bin_idx = np.argmax(hist)
-    table_z_idx = int(np.round((bins[max_bin_idx] + bins[max_bin_idx+1]) / 2.0))
+    print("Auto-detecting orientation by analyzing volumetric mass distribution...")
     
-    # Check if the table is at the top or bottom of the bounding box
-    min_z = np.min(idxs[:, 2])
-    max_z = np.max(idxs[:, 2])
+    # Calculate the mass (number of points) in the top 20% vs bottom 20% of the Z-bounds
+    z_min, z_max = np.min(idxs[:, 2]), np.max(idxs[:, 2])
+    z_range = z_max - z_min
     
-    is_upside_down = (table_z_idx - min_z) > (max_z - table_z_idx)
+    top_threshold = z_max - (z_range * 0.2)
+    bottom_threshold = z_min + (z_range * 0.2)
+    
+    top_mass = np.sum(idxs[:, 2] > top_threshold)
+    bottom_mass = np.sum(idxs[:, 2] < bottom_threshold)
+    
+    # The base of the lobes is always significantly thicker/denser than the pointy tips
+    is_upside_down = top_mass > bottom_mass
     
     # Track the surface shell for each X,Y column
     # If upside down, the surface is the MINIMUM Z

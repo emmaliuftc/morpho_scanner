@@ -8,6 +8,7 @@ def main():
     parser.add_argument("--input", type=str, required=True, help="Input .ply point cloud")
     parser.add_argument("--output", type=str, required=True, help="Output .ply mesh")
     parser.add_argument("--depth", type=int, default=8, help="Poisson reconstruction depth (lower = smoother contour)")
+    parser.add_argument("--taubin", type=int, default=15, help="Number of Taubin smoothing iterations")
     args = parser.parse_args()
 
     print(f"Loading filtered point cloud from {args.input}...")
@@ -27,9 +28,9 @@ def main():
     
     mesh.compute_vertex_normals()
     
-    print("Applying Taubin 3D Smoothing (smoothing bumps without shrinking volume)...")
-    # 15 iterations of Taubin smoothing acts like a robust 3D Gaussian blur for surface geometry
-    mesh = mesh.filter_smooth_taubin(number_of_iterations=15)
+    print(f"Applying Taubin 3D Smoothing ({args.taubin} iterations)...")
+    # Taubin smoothing acts like a robust 3D Gaussian blur for surface geometry
+    mesh = mesh.filter_smooth_taubin(number_of_iterations=args.taubin)
     mesh.compute_vertex_normals()
     
     print("Filtering out small blobs (keeping only the largest connected component)...")

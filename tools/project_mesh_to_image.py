@@ -1,27 +1,35 @@
 import open3d as o3d
+import numpy as np
 import cv2
 import json
-import numpy as np
 import argparse
 import os
 
-def project_mesh(mesh_path, transforms_path, output_dir):
-    print(f"Loading mesh from {mesh_path}...")
+def project_mesh(mesh_path, transforms_path, image_name, bg_image_path, output_path, alpha=0.5):
+    print(f"Loading from {mesh_path}...")
     mesh = o3d.io.read_triangle_mesh(mesh_path)
     vertices = np.asarray(mesh.vertices)
     triangles = np.asarray(mesh.triangles)
-
+    colors = np.asarray(mesh.vertex_colors) * 255.0 if mesh.has_vertex_colors() else None
+    
+    # If no vertices loaded, it might be a point cloud instead of a mesh
+    if len(vertices) == 0:
+        print("Falling back to reading as point cloud...")
+        pcd = o3d.io.read_point_cloud(mesh_path)
+        vertices = np.asarray(pcd.points)
+        triangles = np.array([])
+        colors = np.asarray(pcd.colors) * 255.0 if pcd.has_colors() else None
+    
     print(f"Loading transforms from {transforms_path}...")
     with open(transforms_path, 'r') as f:
-        transforms = json.load(f)
-
-    # Intrinsics
-    fl_x = transforms['fl_x']
-    fl_y = transforms['fl_y']
-    cx = transforms['cx']
-    cy = transforms['cy']
-    w = transforms['w']
-    h = transforms['h']
+        meta = json.load(f)
+        
+    width = meta['w']
+    height = meta['h']
+    fl_x = meta['fl_x']
+    fl_y = meta['fl_y']
+    cx = meta['cx']
+    cy = meta['cy']
     
     K = np.array([
         [fl_x, 0, cx],
@@ -29,84 +37,92 @@ def project_mesh(mesh_path, transforms_path, output_dir):
         [0, 0, 1]
     ])
     
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Pick a few specific frames to render
-    frames_to_render = [0, len(transforms['frames'])//4, len(transforms['frames'])//2]
+    # Find the specific camera for the image
+    c2w = None
+    for frame in meta['frames']:
+        if image_name in frame['file_path']:
+            c2w = np.array(frame['transform_matrix'])
+            break
+            
+    if c2w is None:
+        print(f"Error: Could not find camera for {image_name} in {transforms_path}")
+        return
+        
+    print("Found Camera to World matrix:")
+    print(c2w)
     
-    for frame_idx in frames_to_render:
-        frame = transforms['frames'][frame_idx]
-        img_path = frame['file_path']
+    # NeRF standard is OpenGL (X right, Y up, Z backward)
+    # OpenCV is X right, Y down, Z forward
+    # C2W takes points in Camera space to World space.
+    # W2C takes points from World space to Camera space.
+    w2c = np.linalg.inv(c2w)
+    
+    # Transform vertices to Camera space
+    pts_homo = np.hstack((vertices, np.ones((vertices.shape[0], 1))))
+    pts_cam = (w2c @ pts_homo.T).T
+    pts_cam = pts_cam[:, :3]
+    
+    # Apply OpenGL to OpenCV camera coordinate flip if needed
+    # NeRF transforms.json stores OpenGL C2W matrices.
+    # When we invert to W2C, pts_cam are in OpenGL camera space (Y up, Z back)
+    # We want OpenCV camera space (Y down, Z forward) for projection
+    pts_cam[:, 1] *= -1
+    pts_cam[:, 2] *= -1
+    
+    zc = pts_cam[:, 2]
+    
+    # Project to 2D
+    u = np.round(K[0, 0] * pts_cam[:, 0] / np.maximum(zc, 1e-5) + K[0, 2]).astype(int)
+    v = np.round(K[1, 1] * pts_cam[:, 1] / np.maximum(zc, 1e-5) + K[1, 2]).astype(int)
+    
+    print(f"Loading background image {bg_image_path}...")
+    bg_img = cv2.imread(bg_image_path)
+    if bg_img is None:
+        print(f"Error: Could not load {bg_image_path}")
+        return
         
-        # Determine relative or absolute path
-        base_dir = os.path.dirname(transforms_path)
-        img_full_path = os.path.join(base_dir, img_path)
+    # Resize bg_img if it doesn't match transforms
+    if bg_img.shape[0] != height or bg_img.shape[1] != width:
+        bg_img = cv2.resize(bg_img, (width, height))
         
-        if not os.path.exists(img_full_path):
-            print(f"Cannot find image: {img_full_path}")
-            continue
-
-        print(f"Projecting onto {img_path}...")
-        img = cv2.imread(img_full_path)
-        if img is None:
-            continue
-            
-        c2w = np.array(frame['transform_matrix'])
-        # NeRF to OpenCV camera convention
-        # c2w is camera-to-world. w2c is world-to-camera
-        w2c = np.linalg.inv(c2w)
-        
-        # c2w uses OpenGL convention (y up, z back)
-        # We need OpenCV convention (y down, z forward)
-        R_gl2cv = np.array([
-            [1, 0, 0],
-            [0, -1, 0],
-            [0, 0, -1]
-        ])
-        
-        w2c[:3, :3] = R_gl2cv @ w2c[:3, :3]
-        w2c[:3, 3] = R_gl2cv @ w2c[:3, 3]
-
-        # Transform vertices
-        R = w2c[:3, :3]
-        t = w2c[:3, 3]
-        pts_cam = (R @ vertices.T).T + t
-        
-        zc = pts_cam[:, 2]
-        valid = zc > 1e-5
-        
-        u = np.round(K[0, 0] * pts_cam[:, 0] / zc + K[0, 2]).astype(int)
-        v = np.round(K[1, 1] * pts_cam[:, 1] / zc + K[1, 2]).astype(int)
-        
-        overlay = img.copy()
-        
-        edges = set()
+    overlay = bg_img.copy()
+    
+    if len(triangles) > 0:
+        # Draw wireframe
+        print("Drawing projected wireframe onto image...")
         for tri in triangles:
-            edges.add(tuple(sorted((tri[0], tri[1]))))
-            edges.add(tuple(sorted((tri[1], tri[2]))))
-            edges.add(tuple(sorted((tri[2], tri[0]))))
-            
-        for p1, p2 in edges:
-            if valid[p1] and valid[p2]:
-                if (0 <= u[p1] < w and 0 <= v[p1] < h and 
-                    0 <= u[p2] < w and 0 <= v[p2] < h):
-                    cv2.line(overlay, (u[p1], v[p1]), (u[p2], v[p2]), (0, 255, 255), 2)
-                    
-        alpha = 0.6
-        blended = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
-        
-        # Scale down for output preview
-        blended = cv2.resize(blended, (1152, 648))
-        
-        out_name = f"projection_{os.path.basename(img_path)}"
-        out_path = os.path.join(output_dir, out_name)
-        cv2.imwrite(out_path, blended)
-        print(f"Saved {out_path}")
+            p1, p2, p3 = tri
+            # Only draw if in front of camera
+            if zc[p1] < 0 or zc[p2] < 0 or zc[p3] < 0:
+                continue
+                
+            pts = np.array([[u[p1], v[p1]], [u[p2], v[p2]], [u[p3], v[p3]]], np.int32)
+            cv2.polylines(overlay, [pts], isClosed=True, color=(0, 255, 0), thickness=1)
+    else:
+        # Draw point cloud
+        print("No triangles found, projecting as a point cloud...")
+        for i in range(len(vertices)):
+            if zc[i] > 0:
+                color = (0, 255, 0)
+                if colors is not None:
+                    # OpenCV uses BGR natively for drawing
+                    color = (int(colors[i][2]), int(colors[i][1]), int(colors[i][0]))
+                cv2.circle(overlay, (u[i], v[i]), radius=1, color=color, thickness=-1)
+                
+    # Blend with original to make it transparent
+    result = cv2.addWeighted(bg_img, 1.0 - alpha, overlay, alpha, 0)
+    
+    cv2.imwrite(output_path, result)
+    print(f"Saved projection overlay to {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mesh", required=True)
     parser.add_argument("--transforms", required=True)
-    parser.add_argument("--output_dir", required=True)
+    parser.add_argument("--image_name", required=True, help="Name in JSON (e.g. capture_0)")
+    parser.add_argument("--bg_image", required=True, help="Actual image to draw on")
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--alpha", type=float, default=0.5, help="Opacity of the overlay (0.0 to 1.0)")
     args = parser.parse_args()
-    project_mesh(args.mesh, args.transforms, args.output_dir)
+    
+    project_mesh(args.mesh, args.transforms, args.image_name, args.bg_image, args.output, args.alpha)

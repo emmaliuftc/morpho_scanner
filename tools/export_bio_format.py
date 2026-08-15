@@ -15,14 +15,17 @@ def process(ply_path):
     # 1. Reproject: Invert Z so lobes point UP, and shift so table is at Z=0
     print("Reprojecting coordinate system (lobes UP, table at Z=0)...")
     
-    # Auto-detect orientation using a density histogram to find the flat table
-    hist, bins = np.histogram(points[:, 2], bins=50)
-    max_bin_idx = np.argmax(hist)
-    table_z_peak = (bins[max_bin_idx] + bins[max_bin_idx+1]) / 2.0
+    # Auto-detect orientation by analyzing volumetric mass distribution
+    z_min, z_max = np.min(points[:, 2]), np.max(points[:, 2])
+    z_range = z_max - z_min
     
-    min_z = np.min(points[:, 2])
-    max_z = np.max(points[:, 2])
-    is_upside_down = (table_z_peak - min_z) > (max_z - table_z_peak)
+    top_threshold = z_max - (z_range * 0.2)
+    bottom_threshold = z_min + (z_range * 0.2)
+    
+    top_mass = np.sum(points[:, 2] > top_threshold)
+    bottom_mass = np.sum(points[:, 2] < bottom_threshold)
+    
+    is_upside_down = top_mass > bottom_mass
     
     if is_upside_down:
         print("Point cloud is UPSIDE DOWN. Inverting Z-axis to point lobes UP...")

@@ -36,10 +36,9 @@ def render_pointcloud_orbit(ply_path, output_mp4, width=1280, height=720, frames
     # Camera distance based on bounding box
     camera_z = max_radius * 2.5
     
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = cv2.VideoWriter(output_mp4, fourcc, 30.0, (width, height))
+    frames_list = []
     
-    print(f"Rendering {frames} frames...")
+    print(f"Rendering {frames} frames directly to GIF...")
     for i in range(frames):
         angle = (i / frames) * 2 * np.pi
         
@@ -92,27 +91,28 @@ def render_pointcloud_orbit(ply_path, output_mp4, width=1280, height=720, frames
         v_sorted = v_screen[sort_idx]
         c_sorted = c_screen[sort_idx]
         
-        # Create image (OpenCV uses BGR)
+        # Create image (RGB)
         img = np.zeros((height, width, 3), dtype=np.uint8)
         
-        # Colors are currently RGB from Open3D. Convert to BGR for OpenCV
-        c_sorted_bgr = c_sorted[:, ::-1]
+        # Colors are already RGB from Open3D
+        c_sorted_rgb = c_sorted
         
         # Fast numpy assignment
-        img[v_sorted, u_sorted] = c_sorted_bgr
+        img[v_sorted, u_sorted] = c_sorted_rgb
         
         # Draw 2x2 blocks for a denser point cloud appearance
-        img[np.clip(v_sorted+1, 0, height-1), u_sorted] = c_sorted_bgr
-        img[v_sorted, np.clip(u_sorted+1, 0, width-1)] = c_sorted_bgr
-        img[np.clip(v_sorted+1, 0, height-1), np.clip(u_sorted+1, 0, width-1)] = c_sorted_bgr
+        img[np.clip(v_sorted+1, 0, height-1), u_sorted] = c_sorted_rgb
+        img[v_sorted, np.clip(u_sorted+1, 0, width-1)] = c_sorted_rgb
+        img[np.clip(v_sorted+1, 0, height-1), np.clip(u_sorted+1, 0, width-1)] = c_sorted_rgb
         
-        writer.write(img)
+        frames_list.append(img)
         
         if (i+1) % 10 == 0:
             print(f"Rendered {i+1}/{frames} frames...")
             
-    writer.release()
-    print(f"Video saved to {output_mp4}!")
+    print(f"Encoding GIF... this might take a moment.")
+    imageio.mimsave(output_mp4, frames_list, fps=15)
+    print(f"GIF directly saved to {output_mp4}!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

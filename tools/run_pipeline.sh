@@ -10,7 +10,7 @@ fi
 RAW_DIR=$1
 GOLDEN_CALIB=$2
 STEPS=2000
-STOP_AFTER=8
+STOP_AFTER=9
 
 shift 2
 while [[ $# -gt 0 ]]; do
@@ -198,38 +198,49 @@ if [ "$STOP_AFTER" -ge 7 ]; then
 fi
 
 if [ "$STOP_AFTER" -ge 8 ]; then
-    # Step 8: Generate Orbiting GIFs
-    echo "[Step 8] Generating Orbiting GIFs for all Point Clouds and Meshes..."
+    # Step 8: Generate Solid Volumes and Export Bio-Formats
+    echo "[Step 8] Generating Solid 2.5D Volumes and Exporting Napari NPY..."
     
-    # Render Point Clouds
-    for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply" "${SESSION_DIR}/pointcloud_filtered_full.ply" "${SESSION_DIR}/pointcloud_filtered_obb.ply"; do
+    for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply"; do
         if [ -f "$ply" ]; then
-            out_mp4="${ply%.ply}.mp4"
+            solid_ply="${ply%.ply}_solid_table.ply"
+            echo " -> Extruding solid table volume: $solid_ply"
+            $PYTHON_ENV tools/fill_25d_extrusion.py --input "$ply" --output "$solid_ply" --pitch 0.002
+            
+            echo " -> Reprojecting upright and exporting Napari NPY..."
+            $PYTHON_ENV tools/export_bio_format.py --ply "$solid_ply"
+        fi
+    done
+    echo "- [x] Step 8: Generated Solid Volumes & Bio-Formats" >> "$PROGRESS_FILE"
+fi
+
+if [ "$STOP_AFTER" -ge 9 ]; then
+    # Step 9: Generate Orbiting GIFs
+    echo "[Step 9] Generating Orbiting GIFs for all Point Clouds and Meshes..."
+    
+    # Render Point Clouds directly to GIF
+    for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply" "${SESSION_DIR}/pointcloud_filtered_full.ply" "${SESSION_DIR}/pointcloud_filtered_obb.ply" "${SESSION_DIR}/pointcloud_raw_full_solid_table_reprojected.ply" "${SESSION_DIR}/pointcloud_raw_obb_solid_table_reprojected.ply"; do
+        if [ -f "$ply" ]; then
             out_gif="${ply%.ply}.gif"
             echo " -> Rendering Point Cloud Video: $ply"
-            $PYTHON_ENV tools/render_pointcloud_video.py --ply "$ply" --out "$out_mp4"
-            ffmpeg -v quiet -stats -i "$out_mp4" -vf "fps=15,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -y -loop 0 "$out_gif"
-            rm "$out_mp4"
+            $PYTHON_ENV tools/render_pointcloud_video.py --ply "$ply" --out "$out_gif"
         fi
     done
 
-    # Render Meshes
+    # Render Meshes directly to GIF
     for ply in "${SESSION_DIR}/mesh_full.ply" "${SESSION_DIR}/mesh_obb.ply"; do
         if [ -f "$ply" ]; then
-            out_mp4="${ply%.ply}.mp4"
             out_gif="${ply%.ply}.gif"
             echo " -> Rendering Mesh Video: $ply"
-            $PYTHON_ENV tools/render_mesh_video.py --ply "$ply" --out "$out_mp4"
-            ffmpeg -v quiet -stats -i "$out_mp4" -vf "fps=15,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -y -loop 0 "$out_gif"
-            rm "$out_mp4"
+            $PYTHON_ENV tools/render_mesh_video.py --ply "$ply" --out "$out_gif"
         fi
     done
     
-    echo "- [x] Step 8: Generated Orbiting GIFs" >> "$PROGRESS_FILE"
+    echo "- [x] Step 9: Generated Orbiting GIFs" >> "$PROGRESS_FILE"
 fi
 
 echo "Pipeline script finished!"
-if [ "$STOP_AFTER" -ge 7 ]; then
+if [ "$STOP_AFTER" -ge 9 ]; then
     echo "Final meshes saved to: ${SESSION_DIR}/mesh_obb.ply and ${SESSION_DIR}/mesh_full.ply"
     echo "- [x] Pipeline fully completed!" >> "$PROGRESS_FILE"
 fi

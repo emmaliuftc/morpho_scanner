@@ -35,10 +35,9 @@ def render_mesh_orbit(ply_path, output_mp4, width=1280, height=720, frames=120):
     # Camera distance based on bounding box
     camera_z = max_radius * 2.5
     
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = cv2.VideoWriter(output_mp4, fourcc, 30.0, (width, height))
+    frames_list = []
     
-    print(f"Rendering {frames} frames...")
+    print(f"Rendering {frames} frames directly to GIF...")
     for i in range(frames):
         angle = (i / frames) * 2 * np.pi
         
@@ -68,7 +67,7 @@ def render_mesh_orbit(ply_path, output_mp4, width=1280, height=720, frames=120):
         u = np.round(K[0, 0] * pts_cam[:, 0] / np.maximum(zc, 1e-5) + K[0, 2]).astype(int)
         v = np.round(K[1, 1] * pts_cam[:, 1] / np.maximum(zc, 1e-5) + K[1, 2]).astype(int)
         
-        # Create blank image
+        # Create blank image (RGB)
         img = np.zeros((height, width, 3), dtype=np.uint8)
         
         # Sort triangles by depth (Painter's algorithm)
@@ -88,18 +87,20 @@ def render_mesh_orbit(ply_path, output_mp4, width=1280, height=720, frames=120):
             
             # Simple color averaging for the face
             avg_color = np.mean(colors[tri], axis=0)
-            # OpenCV expects BGR
-            bgr_color = (int(avg_color[2]), int(avg_color[1]), int(avg_color[0]))
+            # Use RGB color directly
+            rgb_color = (int(avg_color[0]), int(avg_color[1]), int(avg_color[2]))
             
-            cv2.fillConvexPoly(img, pts, bgr_color)
+            cv2.fillConvexPoly(img, pts, rgb_color)
             
-        writer.write(img)
+        frames_list.append(img)
         
         if (i+1) % 5 == 0:
             print(f"Rendered {i+1}/{frames} frames...")
             
-    writer.release()
-    print(f"Video saved to {output_mp4}!")
+    print("Encoding GIF... this might take a moment.")
+    import imageio
+    imageio.mimsave(output_mp4, frames_list, fps=15)
+    print(f"GIF directly saved to {output_mp4}!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

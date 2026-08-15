@@ -27,6 +27,10 @@ while [[ $# -gt 0 ]]; do
       CUSTOM_SESSION_DIR="$2"
       shift 2
       ;;
+    --mask-dir)
+      MASK_DIR_ARG="--mask_dir $2"
+      shift 2
+      ;;
     *)
       echo "Unknown argument: $1"
       exit 1
@@ -65,7 +69,7 @@ if [ "$STOP_AFTER" -ge 2 ]; then
         --calib "$GOLDEN_CALIB" \
         --img_dir "$RAW_DIR" \
         --out_dir "$SESSION_DIR" \
-        --scale 4
+        --scale 4 $MASK_DIR_ARG
     echo "- [x] Step 1 & 2: Generated downscaled images and masks" >> "$PROGRESS_FILE"
 fi
 
@@ -85,12 +89,28 @@ if [ "$STOP_AFTER" -ge 3 ]; then
         --json "$SESSION_DIR/transforms_aligned.json" \
         --out "$SESSION_DIR/camera_poses_3d.png" \
         --title "$DATASET_NAME Camera Poses"
+
+    echo "Annotating preview images with Z-axis and Angles..."
+    $PYTHON_ENV tools/annotate_images.py \
+        --session_dir "$SESSION_DIR" \
+        --calib "$GOLDEN_CALIB" \
+        --scale 4
 fi
 
 if [ "$STOP_AFTER" -ge 4 ]; then
     # Step 4: Train NeRF Model
     echo "[Step 4] Training NeRF Model ($STEPS steps)..."
-    cp "$SESSION_DIR/transforms_aligned.json" "$SESSION_DIR/transforms.json"
+    $PYTHON_ENV -c "
+import json
+with open('$SESSION_DIR/transforms_aligned.json', 'r') as f:
+    transforms = json.load(f)
+for i, frame in enumerate(transforms['frames']):
+    frame['file_path'] = f'masked_images_preview_4/preview_capture_{i}.png'
+    if 'mask_path' in frame:
+        del frame['mask_path']
+with open('$SESSION_DIR/transforms.json', 'w') as f:
+    json.dump(transforms, f, indent=4)
+"
 
     .venv_nerf/bin/ns-train nerfacto \
         --data "$SESSION_DIR" \
@@ -99,7 +119,7 @@ if [ "$STOP_AFTER" -ge 4 ]; then
         --max-num-iterations "$STEPS" \
         --pipeline.datamanager.train-num-rays-per-batch 8192 \
         --pipeline.model.disable-scene-contraction True \
-        --pipeline.model.background-color white \
+        --pipeline.model.background-color random \
         --pipeline.model.proposal-initial-sampler uniform \
         --pipeline.model.near-plane 0.1 \
         --pipeline.model.far-plane 2.5 \

@@ -7,6 +7,7 @@ def main():
     parser = argparse.ArgumentParser(description="Create a Poisson mesh from a filtered point cloud")
     parser.add_argument("--input", type=str, required=True, help="Input .ply point cloud")
     parser.add_argument("--output", type=str, required=True, help="Output .ply mesh")
+    parser.add_argument("--depth", type=int, default=8, help="Poisson reconstruction depth (lower = smoother contour)")
     args = parser.parse_args()
 
     print(f"Loading filtered point cloud from {args.input}...")
@@ -15,8 +16,8 @@ def main():
     print("Estimating normals...")
     pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     
-    print("Running Poisson Surface Reconstruction (depth=8)...")
-    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=8)
+    print(f"Running Poisson Surface Reconstruction (depth={args.depth})...")
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=args.depth)
     
     densities = np.asarray(densities)
     if len(densities) > 0:
@@ -24,6 +25,11 @@ def main():
         vertices_to_remove = densities < np.percentile(densities, 5)
         mesh.remove_vertices_by_mask(vertices_to_remove)
     
+    mesh.compute_vertex_normals()
+    
+    print("Applying Taubin 3D Smoothing (smoothing bumps without shrinking volume)...")
+    # 15 iterations of Taubin smoothing acts like a robust 3D Gaussian blur for surface geometry
+    mesh = mesh.filter_smooth_taubin(number_of_iterations=15)
     mesh.compute_vertex_normals()
     
     print("Filtering out small blobs (keeping only the largest connected component)...")
@@ -40,6 +46,19 @@ def main():
     print(f"Mesh created with {len(np.asarray(mesh.vertices))} vertices and {len(np.asarray(mesh.triangles))} triangles.")
     print(f"Saving to {args.output}...")
     o3d.io.write_triangle_mesh(args.output, mesh)
+    
+    print("Running topological hole filling (PyMeshLab)...")
+    try:
+        import pymeshlab
+        ms = pymeshlab.MeshSet()
+        ms.load_new_mesh(args.output)
+        # Close holes up to a reasonably large size (e.g. 1000 edges)
+        ms.meshing_close_holes(maxholesize=1000)
+        ms.save_current_mesh(args.output)
+        print("Hole filling complete!")
+    except ImportError:
+        print("pymeshlab not found, skipping hole filling step.")
+        
     print("Done!")
 
 if __name__ == "__main__":

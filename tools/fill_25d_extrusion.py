@@ -9,8 +9,29 @@ def fill_25d_extrusion(ply_path, out_ply_path, pitch=0.002):
     points = np.asarray(pcd.points)
     colors = np.asarray(pcd.colors)
     
+    has_normals = pcd.has_normals()
+    if has_normals:
+        normals = np.asarray(pcd.normals)
+    else:
+        normals = np.zeros_like(points)
+    
     if len(points) == 0:
-        print("Empty point cloud!")
+        return
+
+    # 1. Mathematical Ground Truth: 
+    # The golden calibration defines the table perfectly at Z=0.
+    # The cameras are at negative Z, looking at Z=0.
+    # Therefore, the object sits in the negative Z space (Z < 0).
+    # Anything with Z > 0 is noise underneath the table.
+    print("Trimming noise below the mathematical table plane (Z > 0)...")
+    valid_mask = points[:, 2] <= 0
+    points = points[valid_mask]
+    colors = colors[valid_mask]
+    if has_normals:
+        normals = normals[valid_mask]
+    
+    if len(points) == 0:
+        print("Empty point cloud after trimming!")
         return
 
     print(f"Discretizing with pitch={pitch}...")
@@ -18,99 +39,81 @@ def fill_25d_extrusion(ply_path, out_ply_path, pitch=0.002):
     max_bound = np.max(points, axis=0)
     
     grid_shape = np.ceil((max_bound - min_bound) / pitch).astype(int) + 1
-    print(f"Grid shape: {grid_shape}")
-    
     idxs = np.floor((points - min_bound) / pitch).astype(int)
     
-    print("Auto-detecting orientation by analyzing volumetric mass distribution...")
-    
-    # Calculate the mass (number of points) in the top 20% vs bottom 20% of the Z-bounds
-    z_min, z_max = np.min(idxs[:, 2]), np.max(idxs[:, 2])
-    z_range = z_max - z_min
-    
-    top_threshold = z_max - (z_range * 0.2)
-    bottom_threshold = z_min + (z_range * 0.2)
-    
-    top_mass = np.sum(idxs[:, 2] > top_threshold)
-    bottom_mass = np.sum(idxs[:, 2] < bottom_threshold)
-    
-    # The base of the lobes is always significantly thicker/denser than the pointy tips
-    is_upside_down = top_mass > bottom_mass
-    
-    # Track the surface shell for each X,Y column
-    # If upside down, the surface is the MINIMUM Z
-    # If right-side up, the surface is the MAXIMUM Z
-    surface_z_grid = np.full((grid_shape[0], grid_shape[1]), 999999 if is_upside_down else -999999, dtype=int)
-    color_grid = np.zeros((grid_shape[0], grid_shape[1], 3), dtype=np.float32)
-    
-    print(f"Detected Orientation: {'UPSIDE DOWN (Extruding UP)' if is_upside_down else 'RIGHT-SIDE UP (Extruding DOWN)'}")
-    t0 = time.time()
-    for i in range(len(idxs)):
-        ix, iy, iz = idxs[i]
-        if is_upside_down:
-            if iz < surface_z_grid[ix, iy]:
-                surface_z_grid[ix, iy] = iz
-                color_grid[ix, iy] = colors[i]
-        else:
-            if iz > surface_z_grid[ix, iy]:
-                surface_z_grid[ix, iy] = iz
-                color_grid[ix, iy] = colors[i]
-            
-    print(f"Heightmap built in {time.time()-t0:.2f} seconds.")
-    
-    # We use a robust percentile to define the concrete floor just beyond the table peak
-    if is_upside_down:
-        global_table_z_idx = int(np.percentile(idxs[:, 2], 95))
-    else:
-        global_table_z_idx = int(np.percentile(idxs[:, 2], 5))
-        
-    print(f"Detected global flat table floor at Z-index: {global_table_z_idx}")
-    
-    t0 = time.time()
+    # 2. Track the surface shell for each X,Y column
+    # Since the object is in negative Z, the crust closest to the camera is the MINIMUM Z.
+    surface_z_grid = np.full((grid_shape[0], grid_shape[1]), 999999, dtype=int)
+    for ix, iy, iz in idxs:
+        if iz < surface_z_grid[ix, iy]:
+            surface_z_grid[ix, iy] = iz
+
+    # We fill up to the table (Z=0).
+    table_iz = int(np.floor((0.0 - min_bound[2]) / pitch))
+
     solid_points = []
     solid_colors = []
+    solid_normals = []
     
+    # Keep ALL valid original points and their colors/normals
+    for i in range(len(points)):
+        solid_points.append(points[i])
+        solid_colors.append(colors[i])
+        solid_normals.append(normals[i])
+        
+    filled_count = 0
+    # Fill the interior from the shell up to the table
     for ix in range(grid_shape[0]):
         for iy in range(grid_shape[1]):
             surf_iz = surface_z_grid[ix, iy]
-            if (is_upside_down and surf_iz != 999999) or (not is_upside_down and surf_iz != -999999):
-                
-                if is_upside_down:
-                    # Fill from the surface of the lobe UP to the table floor
-                    start_iz = surf_iz
-                    end_iz = max(global_table_z_idx, surf_iz)
-                else:
-                    # Fill from the table floor UP to the surface of the lobe
-                    start_iz = min(global_table_z_idx, surf_iz)
-                    end_iz = surf_iz
-                    
-                for iz in range(start_iz, end_iz + 1):
-                    solid_points.append([ix, iy, iz])
-                    # Keep the exact original color for the surface crust, dye the inside blue
-                    if iz == surf_iz:
-                        solid_colors.append(color_grid[ix, iy])
-                    else:
-                        solid_colors.append([0.0, 0.5, 1.0])
+            if surf_iz != 999999:
+                # Fill from the shell crust UP to the mathematical table
+                for iz in range(surf_iz + 1, table_iz):
+                    pt_x = ix * pitch + min_bound[0]
+                    pt_y = iy * pitch + min_bound[1]
+                    pt_z = iz * pitch + min_bound[2]
+                    solid_points.append([pt_x, pt_y, pt_z])
+                    solid_colors.append([0.0, 0.5, 1.0])
+                    solid_normals.append([0.0, 0.0, -1.0]) # Pointing towards the camera origin
+                    filled_count += 1
                         
-    print(f"Extrusion complete in {time.time()-t0:.2f} seconds.")
-    print(f"Generated {len(solid_points)} perfectly solid points anchored to the flat table layer!")
+    print(f"Generated {filled_count} inner blue points, plus {len(points)} original points kept.")
     
-    solid_points = np.array(solid_points, dtype=np.float32) * pitch + min_bound
+    solid_points = np.array(solid_points, dtype=np.float32)
     solid_colors = np.array(solid_colors, dtype=np.float32)
+    solid_normals = np.array(solid_normals, dtype=np.float32)
+    
+    # 3. Orient the point cloud to be RIGHT-SIDE UP for biological viewers (Meshlab, Napari)
+    # The raw NeRF coordinate system has Z pointing DOWN.
+    # To fix this WITHOUT mirroring (which breaks chirality/handedness), we ROTATE 180 degrees around X.
+    # X' = X, Y' = -Y, Z' = -Z
+    print("Rotating 180 degrees around X to make object upright and preserve biological chirality...")
+    solid_points[:, 1] = -solid_points[:, 1]
+    solid_points[:, 2] = -solid_points[:, 2]
+    
+    if has_normals:
+        solid_normals[:, 1] = -solid_normals[:, 1]
+        solid_normals[:, 2] = -solid_normals[:, 2]
+    
+    # Center X and Y around the origin (0,0) for perfectly clean viewer framing
+    center_x = (np.max(solid_points[:, 0]) + np.min(solid_points[:, 0])) / 2.0
+    center_y = (np.max(solid_points[:, 1]) + np.min(solid_points[:, 1])) / 2.0
+    solid_points[:, 0] -= center_x
+    solid_points[:, 1] -= center_y
     
     solid_pcd = o3d.geometry.PointCloud()
     solid_pcd.points = o3d.utility.Vector3dVector(solid_points)
     solid_pcd.colors = o3d.utility.Vector3dVector(solid_colors)
+    if has_normals:
+        solid_pcd.normals = o3d.utility.Vector3dVector(solid_normals)
     
-    print(f"Saving concrete 2.5D solid blob to {out_ply_path}...")
     o3d.io.write_point_cloud(out_ply_path, solid_pcd)
-    print("Done!")
+    print(f"Saved correctly oriented, solid point cloud to {out_ply_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True, help="Input raw .ply")
-    parser.add_argument("--output", required=True, help="Output solid .ply")
-    parser.add_argument("--pitch", type=float, default=0.002, help="Voxel resolution")
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--pitch", type=float, default=0.002)
     args = parser.parse_args()
-    
     fill_25d_extrusion(args.input, args.output, args.pitch)

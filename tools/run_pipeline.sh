@@ -204,10 +204,14 @@ if [ "$STOP_AFTER" -ge 8 ]; then
     for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply"; do
         if [ -f "$ply" ]; then
             solid_ply="${ply%.ply}_solid_table.ply"
+            reprojected_ply="${ply%.ply}_solid_table_reprojected.ply"
             echo " -> Extruding solid table volume: $solid_ply"
             $PYTHON_ENV tools/fill_25d_extrusion.py --input "$ply" --output "$solid_ply" --pitch 0.002
             
-            echo " -> Reprojecting upright and exporting Napari NPY..."
+            echo " -> Creating legacy _reprojected copy..."
+            cp "$solid_ply" "$reprojected_ply"
+            
+            echo " -> Exporting Napari NPY..."
             $PYTHON_ENV tools/export_bio_format.py --ply "$solid_ply"
         fi
     done

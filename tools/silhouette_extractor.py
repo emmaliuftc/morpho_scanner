@@ -5,10 +5,12 @@ from PIL import Image
 from scipy import ndimage
 
 class SilhouetteExtractor:
-    def __init__(self, model_name="u2net"):
+    def __init__(self, model_name="u2net", filter_green=True, filter_blue=False):
         """Initializes the background removal model session once."""
         print(f"Initializing background removal model ({model_name})...")
         self.session = rembg.new_session(model_name)
+        self.filter_green = filter_green
+        self.filter_blue = filter_blue
         
     def get_silhouette_mask(self, img, center_2d=None, plate_radius_pixels=None):
         """
@@ -23,15 +25,27 @@ class SilhouetteExtractor:
         alpha = np.array(rembg_out.split()[-1]) > 128
         filled = ndimage.binary_fill_holes(ndimage.binary_closing(alpha, iterations=5))
         
-        # 2. HSV Color Mask: Remove green plate paper background highlights
+        # 2. HSV Color Masks
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        lower_green = np.array([35, 40, 40])
-        upper_green = np.array([85, 255, 255])
-        green_mask = cv2.inRange(hsv, lower_green, upper_green)
-        non_green_mask = cv2.bitwise_not(green_mask)
+        exclusion_mask = np.zeros(img.shape[:2], dtype=np.uint8)
         
-        # Combine rembg with green color exclusion
-        obj_mask = (filled & (non_green_mask > 0)).astype(np.uint8) * 255
+        if self.filter_green:
+            lower_green = np.array([35, 40, 40])
+            upper_green = np.array([85, 255, 255])
+            green_mask = cv2.inRange(hsv, lower_green, upper_green)
+            exclusion_mask = cv2.bitwise_or(exclusion_mask, green_mask)
+            
+        if self.filter_blue:
+            # Filter blueish backgrounds
+            lower_blue = np.array([90, 40, 40])
+            upper_blue = np.array([130, 255, 255])
+            blue_mask = cv2.inRange(hsv, lower_blue, upper_blue)
+            exclusion_mask = cv2.bitwise_or(exclusion_mask, blue_mask)
+            
+        non_excluded_mask = cv2.bitwise_not(exclusion_mask)
+        
+        # Combine rembg with color exclusion
+        obj_mask = (filled & (non_excluded_mask > 0)).astype(np.uint8) * 255
         
         # 4. ChArUco Board Mask: Detect markers and mask out the entire board using convex hull + dilation
         aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)

@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import time
 
-def fill_25d_extrusion(ply_path, out_ply_path, pitch=0.002):
+def fill_25d_extrusion(ply_path, out_ply_path, pitch=0.002, z_comp_mm=0.0):
     print(f"Loading raw point cloud from {ply_path}...")
     pcd = o3d.io.read_point_cloud(ply_path)
     points = np.asarray(pcd.points)
@@ -18,13 +18,16 @@ def fill_25d_extrusion(ply_path, out_ply_path, pitch=0.002):
     if len(points) == 0:
         return
 
+    # Convert mm compensation to NeRF units (1 unit = 150mm)
+    z_comp_units = z_comp_mm / 150.0
+
     # 1. Mathematical Ground Truth: 
     # The golden calibration defines the table perfectly at Z=0.
     # The cameras are at negative Z, looking at Z=0.
     # Therefore, the object sits in the negative Z space (Z < 0).
-    # Anything with Z > 0 is noise underneath the table.
-    print("Trimming noise below the mathematical table plane (Z > 0)...")
-    valid_mask = points[:, 2] <= 0
+    # Anything with Z > z_comp_units is noise underneath the new compensated table.
+    print(f"Trimming noise below the mathematical table plane (Z > {z_comp_units:.4f})...")
+    valid_mask = points[:, 2] <= z_comp_units
     points = points[valid_mask]
     colors = colors[valid_mask]
     if has_normals:
@@ -48,8 +51,8 @@ def fill_25d_extrusion(ply_path, out_ply_path, pitch=0.002):
         if iz < surface_z_grid[ix, iy]:
             surface_z_grid[ix, iy] = iz
 
-    # We fill up to the table (Z=0).
-    table_iz = int(np.floor((0.0 - min_bound[2]) / pitch))
+    # We fill up to the compensated table.
+    table_iz = int(np.floor((z_comp_units - min_bound[2]) / pitch))
 
     solid_points = []
     solid_colors = []
@@ -115,5 +118,6 @@ if __name__ == "__main__":
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--pitch", type=float, default=0.002)
+    parser.add_argument("--z_comp", type=float, default=0.0, help="Z-compensation in mm (e.g. 4.5)")
     args = parser.parse_args()
-    fill_25d_extrusion(args.input, args.output, args.pitch)
+    fill_25d_extrusion(args.input, args.output, args.pitch, args.z_comp)

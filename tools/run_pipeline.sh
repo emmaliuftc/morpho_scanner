@@ -31,6 +31,14 @@ while [[ $# -gt 0 ]]; do
       MASK_DIR_ARG="--mask_dir $2"
       shift 2
       ;;
+    --no-filter-green)
+      MASK_OPTIONS="$MASK_OPTIONS --no_filter_green"
+      shift 1
+      ;;
+    --filter-blue)
+      MASK_OPTIONS="$MASK_OPTIONS --filter_blue"
+      shift 1
+      ;;
     *)
       echo "Unknown argument: $1"
       exit 1
@@ -69,7 +77,16 @@ if [ "$STOP_AFTER" -ge 2 ]; then
         --calib "$GOLDEN_CALIB" \
         --img_dir "$RAW_DIR" \
         --out_dir "$SESSION_DIR" \
-        --scale 4 $MASK_DIR_ARG
+        --scale 4 $MASK_DIR_ARG $MASK_OPTIONS
+
+    # We only generate masks for the original resolution (scale=1) images
+    # Later scripts will reuse these masks or resize them if needed
+    if [ ! -d "${SESSION_DIR}/masks_1" ]; then
+        echo "Running foreground extraction on native resolution images..."
+        $PYTHON_ENV tools/generate_masks.py --calib "$GOLDEN_CALIB" --img_dir "${SESSION_DIR}/images_1" --out_dir "${SESSION_DIR}/masks_1" $MASK_OPTIONS
+    else
+        echo "Masks already exist. Skipping mask generation."
+    fi
     echo "- [x] Step 1 & 2: Generated downscaled images and masks" >> "$PROGRESS_FILE"
 fi
 

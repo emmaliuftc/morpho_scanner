@@ -13,6 +13,8 @@ def main():
     parser.add_argument("--out_dir", required=True)
     parser.add_argument("--scale", type=int, default=4)
     parser.add_argument("--mask_dir", type=str, default=None, help="Optional directory containing pre-computed masks. If not provided, U2Net will be used.")
+    parser.add_argument("--no_filter_green", action="store_true", help="Disable green background filtering")
+    parser.add_argument("--filter_blue", action="store_true", help="Enable blueish background filtering")
     args = parser.parse_args()
 
     with open(args.calib, "r") as f:
@@ -42,7 +44,10 @@ def main():
     os.makedirs(masked_images_out, exist_ok=True)
     
     if args.mask_dir is None:
-        extractor = SilhouetteExtractor()
+        extractor = SilhouetteExtractor(
+            filter_green=not args.no_filter_green,
+            filter_blue=args.filter_blue
+        )
     
     images = sorted(glob.glob(os.path.join(args.img_dir, "*.jpg")), 
                    key=lambda x: int(os.path.basename(x).split('_')[1].split('.')[0]))

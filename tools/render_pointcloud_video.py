@@ -111,7 +111,7 @@ def render_pointcloud_orbit(ply_path, output_mp4, width=1280, height=720, frames
             print(f"Rendered {i+1}/{frames} frames...")
             
     print(f"Encoding GIF... this might take a moment.")
-    imageio.mimsave(output_mp4, frames_list, fps=15)
+    imageio.mimsave(output_mp4, frames_list, fps=15, loop=0)
     print(f"GIF directly saved to {output_mp4}!")
 
 if __name__ == "__main__":

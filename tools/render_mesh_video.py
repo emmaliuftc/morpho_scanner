@@ -99,7 +99,7 @@ def render_mesh_orbit(ply_path, output_mp4, width=1280, height=720, frames=120):
             
     print("Encoding GIF... this might take a moment.")
     import imageio
-    imageio.mimsave(output_mp4, frames_list, fps=15)
+    imageio.mimsave(output_mp4, frames_list, fps=15, loop=0)
     print(f"GIF directly saved to {output_mp4}!")
 
 if __name__ == "__main__":

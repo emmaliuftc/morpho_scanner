@@ -10,7 +10,7 @@ fi
 RAW_DIR=$1
 GOLDEN_CALIB=$2
 STEPS=2000
-STOP_AFTER=9
+STOP_AFTER=10
 
 shift 2
 while [[ $# -gt 0 ]]; do
@@ -241,6 +241,16 @@ if [ "$STOP_AFTER" -ge 9 ]; then
     done
     
     echo "- [x] Step 9: Generated Orbiting GIFs" >> "$PROGRESS_FILE"
+fi
+
+if [ "$STOP_AFTER" -ge 10 ]; then
+    # Step 10: Generate side-by-side projections
+    echo "[Step 10] Generating side-by-side projections for pointcloud_raw_full.ply..."
+    
+    if [ -f "${SESSION_DIR}/pointcloud_raw_full.ply" ]; then
+        $PYTHON_ENV tools/project_all_masks.py --dir "$SESSION_DIR" --ply "pointcloud_raw_full.ply"
+    fi
+    echo "- [x] Step 10: Generated side-by-side projections" >> "$PROGRESS_FILE"
 fi
 
 echo "Pipeline script finished!"

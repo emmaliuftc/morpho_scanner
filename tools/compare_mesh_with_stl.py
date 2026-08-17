@@ -3,33 +3,55 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 
-def evaluate_mesh_against_stl(eval_mesh_path, stl_path, out_error_ply):
-    print(f"Loading generated mesh from {eval_mesh_path}...")
-    eval_mesh = o3d.io.read_triangle_mesh(eval_mesh_path)
-    # Scale from NeRF units (if 1 unit = 150mm) to mm
-    eval_mesh.scale(150.0, center=(0, 0, 0))
-    eval_verts = np.asarray(eval_mesh.vertices)
-    eval_extents = eval_verts.max(axis=0) - eval_verts.min(axis=0)
+def load_geometry_as_pcd(path, scale=150.0, num_points=1000000):
+    # Try reading as mesh first
+    mesh = o3d.io.read_triangle_mesh(path)
+    if len(mesh.triangles) > 0:
+        if path.endswith('.stl'):
+            # STL is already in mm
+            pass
+        else:
+            # NeRF mesh scaled by 150
+            mesh.scale(scale, center=(0, 0, 0))
+        pcd = mesh.sample_points_uniformly(number_of_points=num_points)
+        extents = np.asarray(pcd.points).max(axis=0) - np.asarray(pcd.points).min(axis=0)
+        return pcd, extents
+    
+    # Otherwise read as point cloud
+    pcd = o3d.io.read_point_cloud(path)
+    points = np.asarray(pcd.points)
+    # Check if points are already in mm (max magnitude > 5.0)
+    if np.max(np.abs(points)) < 5.0:
+        points = points * scale
+    pcd.points = o3d.utility.Vector3dVector(points)
+    extents = points.max(axis=0) - points.min(axis=0)
+    
+    # If point cloud has too few/many points, resample
+    if len(points) > num_points:
+        idx = np.random.choice(len(points), num_points, replace=False)
+        pcd = pcd.select_by_index(idx)
+    return pcd, extents
+
+def evaluate_geometry_against_stl(eval_path, stl_path, out_error_ply):
+    print(f"Loading generated geometry from {eval_path}...")
+    pcd_eval, eval_extents = load_geometry_as_pcd(eval_path, scale=150.0, num_points=1000000)
     
     print(f"Loading ground truth STL from {stl_path}...")
-    stl_mesh = o3d.io.read_triangle_mesh(stl_path)
-    stl_verts = np.asarray(stl_mesh.vertices)
-    stl_extents = stl_verts.max(axis=0) - stl_verts.min(axis=0)
+    pcd_stl, stl_extents = load_geometry_as_pcd(stl_path, scale=1.0, num_points=1000000)
     
     print(f"Ground Truth STL Extents (X, Y, Z): {stl_extents[0]:.2f} mm x {stl_extents[1]:.2f} mm x {stl_extents[2]:.2f} mm")
-    print(f"Generated Mesh Extents (X, Y, Z): {eval_extents[0]:.2f} mm x {eval_extents[1]:.2f} mm x {eval_extents[2]:.2f} mm")
-    
-    print("Sampling 1,000,000 points from both surfaces for accurate distance computation...")
-    pcd_eval = eval_mesh.sample_points_uniformly(number_of_points=1000000)
-    pcd_stl = stl_mesh.sample_points_uniformly(number_of_points=1000000)
+    print(f"Generated Geometry Extents (X, Y, Z): {eval_extents[0]:.2f} mm x {eval_extents[1]:.2f} mm x {eval_extents[2]:.2f} mm")
     
     print("Downsampling to 50,000 points for ICP alignment...")
-    pcd_eval_icp = eval_mesh.sample_points_uniformly(number_of_points=50000)
-    pcd_stl_icp = stl_mesh.sample_points_uniformly(number_of_points=50000)
+    idx_eval = np.random.choice(len(pcd_eval.points), 50000, replace=False)
+    pcd_eval_icp = pcd_eval.select_by_index(idx_eval)
+    
+    idx_stl = np.random.choice(len(pcd_stl.points), 50000, replace=False)
+    pcd_stl_icp = pcd_stl.select_by_index(idx_stl)
     
     print("Performing ICP Alignment (Point-to-Point)...")
     reg = o3d.pipelines.registration.registration_icp(
-        pcd_eval_icp, pcd_stl_icp, 5.0, np.eye(4),
+        pcd_eval_icp, pcd_stl_icp, 10.0, np.eye(4),
         o3d.pipelines.registration.TransformationEstimationPointToPoint(),
         o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=200)
     )
@@ -87,19 +109,14 @@ def evaluate_mesh_against_stl(eval_mesh_path, stl_path, out_error_ply):
     colors = cmap(normalized_dists)[:, :3]
     pcd_eval.colors = o3d.utility.Vector3dVector(colors)
     o3d.io.write_point_cloud(out_error_ply, pcd_eval)
-    
-    # Save the aligned mesh as well for visualization
-    eval_mesh.transform(reg.transformation)
-    aligned_mesh_path = out_error_ply.replace(".ply", "_aligned_mesh.ply")
-    o3d.io.write_triangle_mesh(aligned_mesh_path, eval_mesh)
-    print(f"Saved aligned generated mesh to {aligned_mesh_path}")
+    print(f"Saved error heatmap point cloud to {out_error_ply}")
     print("Done!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--generated", required=True, help="Path to generated mesh PLY")
+    parser.add_argument("--generated", required=True, help="Path to generated mesh or point cloud PLY")
     parser.add_argument("--golden", required=True, help="Path to golden STL")
     parser.add_argument("--out_error", required=True, help="Path to output error pointcloud PLY")
     args = parser.parse_args()
     
-    evaluate_mesh_against_stl(args.generated, args.golden, args.out_error)
+    evaluate_geometry_against_stl(args.generated, args.golden, args.out_error)

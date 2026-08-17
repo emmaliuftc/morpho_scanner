@@ -10,13 +10,18 @@ fi
 RAW_DIR=$1
 GOLDEN_CALIB=$2
 STEPS=2000
-STOP_AFTER=10
+START_FROM=1
+STOP_AFTER=8
 
 shift 2
 while [[ $# -gt 0 ]]; do
   case $1 in
     --steps)
       STEPS="$2"
+      shift 2
+      ;;
+    --start-from)
+      START_FROM="$2"
       shift 2
       ;;
     --stop-after)
@@ -70,7 +75,7 @@ echo "========================================="
 mkdir -p "$SESSION_DIR"
 echo "# Pipeline Progress - $DATASET_NAME ($TIMESTAMP)" > "$PROGRESS_FILE"
 
-if [ "$STOP_AFTER" -ge 2 ]; then
+if [ "$START_FROM" -le 2 ] && [ "$STOP_AFTER" -ge 2 ]; then
     # Step 1 & 2: Prepare Images and Masks (Downscale to 4)
     echo "[Step 1 & 2] Generating Downscaled Images and Silhouette Masks..."
     $PYTHON_ENV tools/prepare_images_and_masks.py \
@@ -90,7 +95,7 @@ if [ "$STOP_AFTER" -ge 2 ]; then
     echo "- [x] Step 1 & 2: Generated downscaled images and masks" >> "$PROGRESS_FILE"
 fi
 
-if [ "$STOP_AFTER" -ge 3 ]; then
+if [ "$START_FROM" -le 3 ] && [ "$STOP_AFTER" -ge 3 ]; then
     # Step 3: Apply Golden Calibration (calculate starting angle from QR code and inherit table matrix)
     echo "[Step 3] Applying Golden Calibration with QR starting angle..."
     $PYTHON_ENV tools/apply_golden_calibration.py \
@@ -114,7 +119,7 @@ if [ "$STOP_AFTER" -ge 3 ]; then
         --scale 4
 fi
 
-if [ "$STOP_AFTER" -ge 4 ]; then
+if [ "$START_FROM" -le 4 ] && [ "$STOP_AFTER" -ge 4 ]; then
     # Step 4: Train NeRF Model
     echo "[Step 4] Training NeRF Model ($STEPS steps)..."
     $PYTHON_ENV -c "
@@ -151,7 +156,7 @@ with open('$SESSION_DIR/transforms.json', 'w') as f:
     echo "- [x] Step 4: Trained NeRF Model" >> "$PROGRESS_FILE"
 fi
 
-if [ "$STOP_AFTER" -ge 5 ]; then
+if [ "$START_FROM" -le 5 ] && [ "$STOP_AFTER" -ge 5 ]; then
     # Find the config file path dynamically
     CONFIG_PATH=$(find "${SESSION_DIR}/outputs" -name "config.yml" | sort -r | head -n 1)
 
@@ -184,39 +189,9 @@ if [ "$STOP_AFTER" -ge 5 ]; then
     echo "- [x] Step 5: Extracted raw point clouds (Full and OBB)" >> "$PROGRESS_FILE"
 fi
 
-if [ "$STOP_AFTER" -ge 6 ]; then
-    # Step 6: Filter and Z-clip the point cloud
-    echo "[Step 6] Filtering Point Clouds (Z-Clip & SOR)..."
-    
-    $PYTHON_ENV tools/nerf/filter_cloud.py \
-        --input "${SESSION_DIR}/pointcloud_raw_full.ply" \
-        --output "${SESSION_DIR}/pointcloud_filtered_full.ply"
-        
-    $PYTHON_ENV tools/nerf/filter_cloud.py \
-        --input "${SESSION_DIR}/pointcloud_raw_obb.ply" \
-        --output "${SESSION_DIR}/pointcloud_filtered_obb.ply"
-        
-    echo "- [x] Step 6: Filtered point clouds" >> "$PROGRESS_FILE"
-fi
-
-if [ "$STOP_AFTER" -ge 7 ]; then
-    # Step 7: Generate Poisson Mesh
-    echo "[Step 7] Generating Poisson Meshes..."
-    
-    $PYTHON_ENV tools/nerf/create_mesh.py \
-        --input "${SESSION_DIR}/pointcloud_filtered_full.ply" \
-        --output "${SESSION_DIR}/mesh_full.ply"
-        
-    $PYTHON_ENV tools/nerf/create_mesh.py \
-        --input "${SESSION_DIR}/pointcloud_filtered_obb.ply" \
-        --output "${SESSION_DIR}/mesh_obb.ply"
-        
-    echo "- [x] Step 7: Generated Poisson meshes" >> "$PROGRESS_FILE"
-fi
-
-if [ "$STOP_AFTER" -ge 8 ]; then
-    # Step 8: Generate Solid Volumes and Export Bio-Formats
-    echo "[Step 8] Generating Solid 2.5D Volumes and Exporting Napari NPY..."
+if [ "$START_FROM" -le 6 ] && [ "$STOP_AFTER" -ge 6 ]; then
+    # Step 6: Generate Solid Volumes and Export Bio-Formats
+    echo "[Step 6] Generating Solid 2.5D Volumes and Exporting Napari NPY..."
     
     for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply"; do
         if [ -f "$ply" ]; then
@@ -232,46 +207,35 @@ if [ "$STOP_AFTER" -ge 8 ]; then
             $PYTHON_ENV tools/export_bio_format.py --ply "$solid_ply"
         fi
     done
-    echo "- [x] Step 8: Generated Solid Volumes & Bio-Formats" >> "$PROGRESS_FILE"
+    echo "- [x] Step 6: Generated Solid Volumes & Bio-Formats" >> "$PROGRESS_FILE"
 fi
 
-if [ "$STOP_AFTER" -ge 9 ]; then
-    # Step 9: Generate Orbiting GIFs
-    echo "[Step 9] Generating Orbiting GIFs for all Point Clouds and Meshes..."
+if [ "$START_FROM" -le 7 ] && [ "$STOP_AFTER" -ge 7 ]; then
+    # Step 7: Generate Orbiting GIFs
+    echo "[Step 7] Generating Orbiting GIFs for Point Clouds..."
     
-    # Render Point Clouds directly to GIF
-    for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply" "${SESSION_DIR}/pointcloud_filtered_full.ply" "${SESSION_DIR}/pointcloud_filtered_obb.ply" "${SESSION_DIR}/pointcloud_raw_full_solid_table_reprojected.ply" "${SESSION_DIR}/pointcloud_raw_obb_solid_table_reprojected.ply"; do
+    for ply in "${SESSION_DIR}/pointcloud_raw_full.ply" "${SESSION_DIR}/pointcloud_raw_obb.ply" "${SESSION_DIR}/pointcloud_raw_full_solid_table_reprojected.ply" "${SESSION_DIR}/pointcloud_raw_obb_solid_table_reprojected.ply"; do
         if [ -f "$ply" ]; then
             out_gif="${ply%.ply}.gif"
             echo " -> Rendering Point Cloud Video: $ply"
             $PYTHON_ENV tools/render_pointcloud_video.py --ply "$ply" --out "$out_gif"
         fi
     done
-
-    # Render Meshes directly to GIF
-    for ply in "${SESSION_DIR}/mesh_full.ply" "${SESSION_DIR}/mesh_obb.ply"; do
-        if [ -f "$ply" ]; then
-            out_gif="${ply%.ply}.gif"
-            echo " -> Rendering Mesh Video: $ply"
-            $PYTHON_ENV tools/render_mesh_video.py --ply "$ply" --out "$out_gif"
-        fi
-    done
     
-    echo "- [x] Step 9: Generated Orbiting GIFs" >> "$PROGRESS_FILE"
+    echo "- [x] Step 7: Generated Orbiting GIFs" >> "$PROGRESS_FILE"
 fi
 
-if [ "$STOP_AFTER" -ge 10 ]; then
-    # Step 10: Generate side-by-side projections
-    echo "[Step 10] Generating side-by-side projections for pointcloud_raw_full.ply..."
+if [ "$START_FROM" -le 8 ] && [ "$STOP_AFTER" -ge 8 ]; then
+    # Step 8: Generate side-by-side projections
+    echo "[Step 8] Generating side-by-side projections for pointcloud_raw_full.ply..."
     
     if [ -f "${SESSION_DIR}/pointcloud_raw_full.ply" ]; then
         $PYTHON_ENV tools/project_all_masks.py --dir "$SESSION_DIR" --ply "pointcloud_raw_full.ply"
     fi
-    echo "- [x] Step 10: Generated side-by-side projections" >> "$PROGRESS_FILE"
+    echo "- [x] Step 8: Generated side-by-side projections" >> "$PROGRESS_FILE"
 fi
 
 echo "Pipeline script finished!"
-if [ "$STOP_AFTER" -ge 9 ]; then
-    echo "Final meshes saved to: ${SESSION_DIR}/mesh_obb.ply and ${SESSION_DIR}/mesh_full.ply"
+if [ "$START_FROM" -le 8 ] && [ "$STOP_AFTER" -ge 8 ]; then
     echo "- [x] Pipeline fully completed!" >> "$PROGRESS_FILE"
 fi

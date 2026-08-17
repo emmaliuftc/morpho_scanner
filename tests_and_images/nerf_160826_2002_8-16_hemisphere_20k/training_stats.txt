@@ -1,0 +1,517 @@
+[01:10:13] Using --data alias for --data.pipeline.datamanager.data                                          train.py:230
+──────────────────────────────────────────────────────── Config ────────────────────────────────────────────────────────
+TrainerConfig(
+    _target=<class 'nerfstudio.engine.trainer.Trainer'>,
+    output_dir=PosixPath('nerf_160826_2002_8-16_hemisphere_20k/outputs'),
+    method_name='nerfacto',
+    experiment_name=None,
+    project_name='nerfstudio-project',
+    timestamp='2026-08-17_011013',
+    machine=MachineConfig(seed=42, num_devices=1, num_machines=1, machine_rank=0, dist_url='auto', device_type='cuda'),
+    logging=LoggingConfig(
+        relative_log_dir=PosixPath('.'),
+        steps_per_log=10,
+        max_buffer_size=20,
+        local_writer=LocalWriterConfig(
+            _target=<class 'nerfstudio.utils.writer.LocalWriter'>,
+            enable=True,
+            stats_to_track=(
+                <EventName.ITER_TRAIN_TIME: 'Train Iter (time)'>,
+                <EventName.TRAIN_RAYS_PER_SEC: 'Train Rays / Sec'>,
+                <EventName.CURR_TEST_PSNR: 'Test PSNR'>,
+                <EventName.VIS_RAYS_PER_SEC: 'Vis Rays / Sec'>,
+                <EventName.TEST_RAYS_PER_SEC: 'Test Rays / Sec'>,
+                <EventName.ETA: 'ETA (time)'>
+            ),
+            max_log_size=10
+        ),
+        profiler='basic'
+    ),
+    viewer=ViewerConfig(
+        relative_log_filename='viewer_log_filename.txt',
+        websocket_port=None,
+        websocket_port_default=7007,
+        websocket_host='0.0.0.0',
+        num_rays_per_chunk=32768,
+        max_num_display_images=512,
+        quit_on_train_completion=False,
+        image_format='jpeg',
+        jpeg_quality=75,
+        make_share_url=False,
+        camera_frustum_scale=0.1,
+        default_composite_depth=True
+    ),
+    pipeline=VanillaPipelineConfig(
+        _target=<class 'nerfstudio.pipelines.base_pipeline.VanillaPipeline'>,
+        datamanager=ParallelDataManagerConfig(
+            _target=<class 'nerfstudio.data.datamanagers.parallel_datamanager.ParallelDataManager'>,
+            data=PosixPath('nerf_160826_2002_8-16_hemisphere_20k'),
+            masks_on_gpu=False,
+            images_on_gpu=False,
+            dataparser=NerfstudioDataParserConfig(
+                _target=<class 'nerfstudio.data.dataparsers.nerfstudio_dataparser.Nerfstudio'>,
+                data=PosixPath('.'),
+                scale_factor=1.0,
+                downscale_factor=None,
+                scene_scale=1.0,
+                orientation_method='none',
+                center_method='none',
+                auto_scale_poses=False,
+                eval_mode='all',
+                train_split_fraction=0.9,
+                eval_interval=8,
+                depth_unit_scale_factor=0.001,
+                mask_color=None,
+                load_3D_points=False
+            ),
+            train_num_rays_per_batch=8192,
+            train_num_images_to_sample_from=-1,
+            train_num_times_to_repeat_images=-1,
+            eval_num_rays_per_batch=4096,
+            eval_num_images_to_sample_from=-1,
+            eval_num_times_to_repeat_images=-1,
+            eval_image_indices=(0,),
+            collate_fn=<function nerfstudio_collate at 0x7f9956d07740>,
+            camera_res_scale_factor=1.0,
+            patch_size=1,
+            camera_optimizer=None,
+            pixel_sampler=PixelSamplerConfig(
+                _target=<class 'nerfstudio.data.pixel_samplers.PixelSampler'>,
+                num_rays_per_batch=4096,
+                keep_full_image=False,
+                is_equirectangular=False,
+                ignore_mask=False,
+                fisheye_crop_radius=None,
+                rejection_sample_mask=True,
+                max_num_iterations=100
+            ),
+            num_processes=1,
+            queue_size=2,
+            max_thread_workers=None
+        ),
+        model=NerfactoModelConfig(
+            _target=<class 'nerfstudio.models.nerfacto.NerfactoModel'>,
+            enable_collider=True,
+            collider_params={'near_plane': 2.0, 'far_plane': 6.0},
+            loss_coefficients={'rgb_loss_coarse': 1.0, 'rgb_loss_fine': 1.0},
+            eval_num_rays_per_chunk=32768,
+            prompt=None,
+            near_plane=0.1,
+            far_plane=2.5,
+            background_color='random',
+            hidden_dim=64,
+            hidden_dim_color=64,
+            hidden_dim_transient=64,
+            num_levels=16,
+            base_res=16,
+            max_res=2048,
+            log2_hashmap_size=19,
+            features_per_level=2,
+            num_proposal_samples_per_ray=(256, 96),
+            num_nerf_samples_per_ray=48,
+            proposal_update_every=5,
+            proposal_warmup=5000,
+            num_proposal_iterations=2,
+            use_same_proposal_network=False,
+            proposal_net_args_list=[
+                {'hidden_dim': 16, 'log2_hashmap_size': 17, 'num_levels': 5, 'max_res': 128, 'use_linear': False},
+                {'hidden_dim': 16, 'log2_hashmap_size': 17, 'num_levels': 5, 'max_res': 256, 'use_linear': False}
+            ],
+            proposal_initial_sampler='uniform',
+            interlevel_loss_mult=1.0,
+            distortion_loss_mult=0.002,
+            orientation_loss_mult=0.0001,
+            pred_normal_loss_mult=0.001,
+            use_proposal_weight_anneal=True,
+            use_appearance_embedding=True,
+            use_average_appearance_embedding=False,
+            proposal_weights_anneal_slope=10.0,
+            proposal_weights_anneal_max_num_iters=1000,
+            use_single_jitter=True,
+            predict_normals=False,
+            disable_scene_contraction=True,
+            use_gradient_scaling=False,
+            implementation='tcnn',
+            appearance_embed_dim=32,
+            average_init_density=0.01,
+            camera_optimizer=CameraOptimizerConfig(
+                _target=<class 'nerfstudio.cameras.camera_optimizers.CameraOptimizer'>,
+                mode='off',
+                trans_l2_penalty=0.01,
+                rot_l2_penalty=0.001,
+                optimizer=None,
+                scheduler=None
+            )
+        )
+    ),
+    optimizers={
+        'proposal_networks': {
+            'optimizer': AdamOptimizerConfig(
+                _target=<class 'torch.optim.adam.Adam'>,
+                lr=0.01,
+                eps=1e-15,
+                max_norm=None,
+                weight_decay=0
+            ),
+            'scheduler': ExponentialDecaySchedulerConfig(
+                _target=<class 'nerfstudio.engine.schedulers.ExponentialDecayScheduler'>,
+                lr_pre_warmup=1e-08,
+                lr_final=0.0001,
+                warmup_steps=0,
+                max_steps=200000,
+                ramp='cosine'
+            )
+        },
+        'fields': {
+            'optimizer': AdamOptimizerConfig(
+                _target=<class 'torch.optim.adam.Adam'>,
+                lr=0.01,
+                eps=1e-15,
+                max_norm=None,
+                weight_decay=0
+            ),
+            'scheduler': ExponentialDecaySchedulerConfig(
+                _target=<class 'nerfstudio.engine.schedulers.ExponentialDecayScheduler'>,
+                lr_pre_warmup=1e-08,
+                lr_final=0.0001,
+                warmup_steps=0,
+                max_steps=200000,
+                ramp='cosine'
+            )
+        },
+        'camera_opt': {
+            'optimizer': AdamOptimizerConfig(
+                _target=<class 'torch.optim.adam.Adam'>,
+                lr=0.001,
+                eps=1e-15,
+                max_norm=None,
+                weight_decay=0
+            ),
+            'scheduler': ExponentialDecaySchedulerConfig(
+                _target=<class 'nerfstudio.engine.schedulers.ExponentialDecayScheduler'>,
+                lr_pre_warmup=1e-08,
+                lr_final=0.0001,
+                warmup_steps=0,
+                max_steps=5000,
+                ramp='cosine'
+            )
+        }
+    },
+    vis='tensorboard',
+    data=PosixPath('nerf_160826_2002_8-16_hemisphere_20k'),
+    prompt=None,
+    relative_model_dir=PosixPath('nerfstudio_models'),
+    load_scheduler=True,
+    steps_per_save=2000,
+    steps_per_eval_batch=500,
+    steps_per_eval_image=500,
+    steps_per_eval_all_images=25000,
+    max_num_iterations=20000,
+    mixed_precision=True,
+    use_grad_scaler=False,
+    save_only_latest_checkpoint=True,
+    load_dir=None,
+    load_step=None,
+    load_config=None,
+    load_checkpoint=None,
+    log_gradients=False,
+    gradient_accumulation_steps={},
+    start_paused=False
+)
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+           Saving config to:                                                                    experiment_config.py:136
+           nerf_160826_2002_8-16_hemisphere_20k/outputs/nerf_160826_2002_8-16_hemisphere_20k/ne                         
+           rfacto/2026-08-17_011013/config.yml                                                                          
+           Saving checkpoints to:                                                                         trainer.py:142
+           nerf_160826_2002_8-16_hemisphere_20k/outputs/nerf_160826_2002_8-16_hemisphere_20k/nerfacto/202               
+           6-08-17_011013/nerfstudio_models                                                                             
+           Auto image downscale factor of 1                                                 nerfstudio_dataparser.py:484
+            Be careful with '--eval-mode=all'. If using camera optimization, the cameras    nerfstudio_dataparser.py:216
+           may diverge in the current implementation, giving unpredictable results.                                     
+            Be careful with '--eval-mode=all'. If using camera optimization, the cameras    nerfstudio_dataparser.py:216
+           may diverge in the current implementation, giving unpredictable results.                                     
+            Be careful with '--eval-mode=all'. If using camera optimization, the cameras    nerfstudio_dataparser.py:216
+           may diverge in the current implementation, giving unpredictable results.                                     
+Started threads
+Setting up evaluation dataset...
+Caching all 64 images.
+Loading data batch ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:01
+
+No Nerfstudio checkpoint to load, so training from scratch.
+logging events to: 
+nerf_160826_2002_8-16_hemisphere_20k/outputs/nerf_160826_2002_8-16_hemisphere_20k/nerfacto/2026-08-17_011013
+[01:10:30] Printing max of 10 lines. Set flag --logging.local-writer.max-log-size=0 to disable line        writer.py:449
+           wrapping.                                                                                                    
+Step (% Done)       Train Iter (time)    ETA (time)           
+--------------------------------------------------------------
+[2A[1KStep (% Done)       Train Iter (time)    ETA (time)            [0m
+-------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s       [0m
+[3A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+[4A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+[5A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+[6A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+[7A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+[8A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+[9A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+[10A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+[11A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+0 (0.00%)           817.388 ms           4 h, 32 m, 27 s                            [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+10 (0.05%)          146.363 ms           48 m, 45 s           103.76 K              [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+20 (0.10%)          71.218 ms            23 m, 42 s           122.23 K              [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+30 (0.15%)          58.222 ms            19 m, 22 s           149.66 K              [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+40 (0.20%)          53.928 ms            17 m, 56 s           158.27 K              [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+50 (0.25%)          56.088 ms            18 m, 38 s           153.67 K              [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+60 (0.30%)          55.807 ms            18 m, 32 s           154.64 K              [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+70 (0.35%)          56.488 ms            18 m, 45 s           151.42 K              [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+80 (0.40%)          56.157 ms            18 m, 38 s           151.84 K              [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+90 (0.45%)          53.748 ms            17 m, 50 s           157.93 K              [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+100 (0.50%)         55.885 ms            18 m, 32 s           153.14 K              [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+190 (0.95%)         62.298 ms            20 m, 34 s           144.30 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+110 (0.55%)         68.114 ms            22 m, 34 s           130.05 K              [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+190 (0.95%)         62.298 ms            20 m, 34 s           144.30 K              [0m
+200 (1.00%)         63.777 ms            21 m, 2 s            142.01 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+120 (0.60%)         69.615 ms            23 m, 3 s            126.19 K              [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+190 (0.95%)         62.298 ms            20 m, 34 s           144.30 K              [0m
+200 (1.00%)         63.777 ms            21 m, 2 s            142.01 K              [0m
+210 (1.05%)         68.685 ms            22 m, 39 s           131.93 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+130 (0.65%)         58.529 ms            19 m, 22 s           147.11 K              [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+190 (0.95%)         62.298 ms            20 m, 34 s           144.30 K              [0m
+200 (1.00%)         63.777 ms            21 m, 2 s            142.01 K              [0m
+210 (1.05%)         68.685 ms            22 m, 39 s           131.93 K              [0m
+220 (1.10%)         72.814 ms            24 m, 0 s            121.88 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+140 (0.70%)         57.234 ms            18 m, 56 s           149.93 K              [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+190 (0.95%)         62.298 ms            20 m, 34 s           144.30 K              [0m
+200 (1.00%)         63.777 ms            21 m, 2 s            142.01 K              [0m
+210 (1.05%)         68.685 ms            22 m, 39 s           131.93 K              [0m
+220 (1.10%)         72.814 ms            24 m, 0 s            121.88 K              [0m
+230 (1.15%)         60.332 ms            19 m, 52 s           144.55 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+150 (0.75%)         56.444 ms            18 m, 40 s           151.68 K              [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+190 (0.95%)         62.298 ms            20 m, 34 s           144.30 K              [0m
+200 (1.00%)         63.777 ms            21 m, 2 s            142.01 K              [0m
+210 (1.05%)         68.685 ms            22 m, 39 s           131.93 K              [0m
+220 (1.10%)         72.814 ms            24 m, 0 s            121.88 K              [0m
+230 (1.15%)         60.332 ms            19 m, 52 s           144.55 K              [0m
+240 (1.20%)         55.876 ms            18 m, 24 s           153.74 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+160 (0.80%)         55.583 ms            18 m, 22 s           153.68 K              [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m
+190 (0.95%)         62.298 ms            20 m, 34 s           144.30 K              [0m
+200 (1.00%)         63.777 ms            21 m, 2 s            142.01 K              [0m
+210 (1.05%)         68.685 ms            22 m, 39 s           131.93 K              [0m
+220 (1.10%)         72.814 ms            24 m, 0 s            121.88 K              [0m
+230 (1.15%)         60.332 ms            19 m, 52 s           144.55 K              [0m
+240 (1.20%)         55.876 ms            18 m, 24 s           153.74 K              [0m
+250 (1.25%)         57.026 ms            18 m, 46 s           151.59 K              [0m
+[12A[1KStep (% Done)       Train Iter (time)    ETA (time)           Train Rays / Sec      [0m
+----------------------------------------------------------------------------------- [0m
+170 (0.85%)         58.352 ms            19 m, 17 s           148.72 K              [0m
+180 (0.90%)         57.015 ms            18 m, 50 s           152.39 K              [0m

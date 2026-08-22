@@ -2,39 +2,44 @@ import open3d as o3d
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+import json
+import os
 
-def load_geometry_as_pcd(path, scale=150.0, num_points=1000000):
-    # Try reading as mesh first
+def get_calibration_scale(calib_path):
+    if not calib_path or not os.path.exists(calib_path):
+        return 174.09726
+    with open(calib_path, 'r') as f:
+        data = json.load(f)
+    if 'plate_center_mm' in data:
+        return float(np.linalg.norm(data['plate_center_mm']))
+    return 174.09726
+
+def load_geometry_as_pcd(path, scale=174.09726, num_points=1000000):
     mesh = o3d.io.read_triangle_mesh(path)
     if len(mesh.triangles) > 0:
         if path.endswith('.stl'):
-            # STL is already in mm
             pass
         else:
-            # NeRF mesh scaled by 150
             mesh.scale(scale, center=(0, 0, 0))
         pcd = mesh.sample_points_uniformly(number_of_points=num_points)
         extents = np.asarray(pcd.points).max(axis=0) - np.asarray(pcd.points).min(axis=0)
         return pcd, extents
     
-    # Otherwise read as point cloud
     pcd = o3d.io.read_point_cloud(path)
     points = np.asarray(pcd.points)
-    # Check if points are already in mm (max magnitude > 5.0)
     if np.max(np.abs(points)) < 5.0:
         points = points * scale
     pcd.points = o3d.utility.Vector3dVector(points)
     extents = points.max(axis=0) - points.min(axis=0)
     
-    # If point cloud has too few/many points, resample
     if len(points) > num_points:
         idx = np.random.choice(len(points), num_points, replace=False)
         pcd = pcd.select_by_index(idx)
     return pcd, extents
 
-def evaluate_geometry_against_stl(eval_path, stl_path, out_error_ply):
-    print(f"Loading generated geometry from {eval_path}...")
-    pcd_eval, eval_extents = load_geometry_as_pcd(eval_path, scale=150.0, num_points=1000000)
+def evaluate_geometry_against_stl(eval_path, stl_path, out_error_ply, scale=174.09726):
+    print(f"Loading generated geometry from {eval_path} (scale = {scale:.3f} mm)...")
+    pcd_eval, eval_extents = load_geometry_as_pcd(eval_path, scale=scale, num_points=1000000)
     
     print(f"Loading ground truth STL from {stl_path}...")
     pcd_stl, stl_extents = load_geometry_as_pcd(stl_path, scale=1.0, num_points=1000000)
@@ -117,6 +122,9 @@ if __name__ == "__main__":
     parser.add_argument("--generated", required=True, help="Path to generated mesh or point cloud PLY")
     parser.add_argument("--golden", required=True, help="Path to golden STL")
     parser.add_argument("--out_error", required=True, help="Path to output error pointcloud PLY")
+    parser.add_argument("--calib", default="captures_8-13_calibration_results/calibration.json")
+    parser.add_argument("--scale", type=float, default=None)
     args = parser.parse_args()
     
-    evaluate_geometry_against_stl(args.generated, args.golden, args.out_error)
+    scale = args.scale if args.scale is not None else get_calibration_scale(args.calib)
+    evaluate_geometry_against_stl(args.generated, args.golden, args.out_error, scale=scale)

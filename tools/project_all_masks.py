@@ -64,15 +64,16 @@ def project_all_masks(base_dir, pointcloud_file, alpha=1.0):
         u = np.round(K[0, 0] * pts_cam[:, 0] / np.maximum(zc, 1e-5) + K[0, 2]).astype(int)
         v = np.round(K[1, 1] * pts_cam[:, 1] / np.maximum(zc, 1e-5) + K[1, 2]).astype(int)
         
+        valid = (zc > 0) & (u >= 0) & (u < width) & (v >= 0) & (v < height)
+        u_val = u[valid]
+        v_val = v[valid]
+        
         overlay = bg_img.copy()
-        for i in range(len(vertices)):
-            if zc[i] > 0:
-                color = (0, 255, 0)
-                if colors is not None:
-                    color = (int(colors[i][2]), int(colors[i][1]), int(colors[i][0]))
-                # Make sure points are in bounds
-                if 0 <= u[i] < width and 0 <= v[i] < height:
-                    cv2.circle(overlay, (u[i], v[i]), radius=1, color=color, thickness=-1)
+        if colors is not None:
+            c_val = colors[valid][:, ::-1] # RGB to BGR
+            overlay[v_val, u_val] = c_val
+        else:
+            overlay[v_val, u_val] = (0, 255, 0)
                 
         result = cv2.addWeighted(bg_img, 1.0 - alpha, overlay, alpha, 0)
         

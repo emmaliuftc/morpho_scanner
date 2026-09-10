@@ -5,21 +5,33 @@ from PIL import Image
 from scipy import ndimage
 
 class SilhouetteExtractor:
-    def __init__(self, model_name="u2net", filter_green=True, filter_blue=False):
-        """Initializes the background removal model session once."""
+    def __init__(self, model_name="u2net", filter_green=True, filter_blue=False, 
+                 green_profile="standard", keep_largest_component=False):
+        """Initializes the background removal model session once.
+        
+        Args:
+            model_name: rembg model name (default: 'u2net')
+            filter_green: Whether to exclude green turntable platter
+            filter_blue: Whether to exclude blue backgrounds
+            green_profile: 'standard' (clay/neutral targets: H 35..85) or 
+                           'green_object' (green targets on sage turntable: H 65..125, S >= 10)
+            keep_largest_component: Whether to keep only the largest connected component in Stage 4
+        """
         print(f"Initializing background removal model ({model_name})...")
         self.session = rembg.new_session(model_name)
         self.filter_green = filter_green
         self.filter_blue = filter_blue
+        self.green_profile = green_profile
+        self.keep_largest_component = keep_largest_component
         
     def get_silhouette_mask(self, img, center_2d=None, plate_radius_pixels=None):
         """
-        Isolates the clay object by masking out the background, green plate, and ChArUco board.
+        Isolates the target object by masking out the background, green plate, and ChArUco board.
         Returns a binary mask where 255 is the object, 0 is background.
         """
         height, width = img.shape[:2]
         
-        # 1. rembg Mask: Isolate foreground elements (clay sculpture and ChArUco board)
+        # 1. rembg Mask: Isolate foreground elements (object and ChArUco board)
         img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         rembg_out = rembg.remove(img_pil, session=self.session)
         alpha = np.array(rembg_out.split()[-1]) > 128
@@ -30,8 +42,16 @@ class SilhouetteExtractor:
         exclusion_mask = np.zeros(img.shape[:2], dtype=np.uint8)
         
         if self.filter_green:
-            lower_green = np.array([35, 40, 40])
-            upper_green = np.array([85, 255, 255])
+            if self.green_profile == "green_object":
+                # Tuned exclusion window for green objects resting on sage/mint platter:
+                # Protects warm lime-green object (H ~ 54..63, S > 140)
+                # Excludes cooler sage/mint foam platter (H 67..125, S >= 10)
+                lower_green = np.array([67, 10, 30])
+                upper_green = np.array([125, 255, 255])
+            else:
+                # Standard profile for neutral/clay targets
+                lower_green = np.array([35, 40, 40])
+                upper_green = np.array([85, 255, 255])
             green_mask = cv2.inRange(hsv, lower_green, upper_green)
             exclusion_mask = cv2.bitwise_or(exclusion_mask, green_mask)
             
@@ -75,5 +95,11 @@ class SilhouetteExtractor:
         kernel_open = np.ones((5, 5), np.uint8)
         final_mask = cv2.morphologyEx(final_mask, cv2.MORPH_OPEN, kernel_open)
         final_mask = ndimage.binary_fill_holes(final_mask > 0).astype(np.uint8) * 255
+        
+        if self.keep_largest_component:
+            num_labels, labels, stats, _ = cv2.connectedComponentsWithStats((final_mask > 0).astype(np.uint8))
+            if num_labels > 1:
+                largest_idx = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+                final_mask = (labels == largest_idx).astype(np.uint8) * 255
         
         return final_mask

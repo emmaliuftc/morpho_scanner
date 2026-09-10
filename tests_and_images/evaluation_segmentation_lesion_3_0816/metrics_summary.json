@@ -1,0 +1,38 @@
+{
+  "dataset": "nerf_160826_0824_8-16_lesion_3/images_4",
+  "total_frames": 64,
+  "total_time_seconds": 14.06,
+  "avg_time_per_frame_seconds": 0.22,
+  "stage1_u2net": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_pixels": 27427
+  },
+  "stage2_standard_green": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_pixels_removed": 335,
+    "avg_pixels_remaining": 27092
+  },
+  "stage3_aruco_hull": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_markers_detected": 0.83,
+    "avg_board_pixels_removed": 0
+  },
+  "stage4_morphological_cleanup": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_islands_removed": 2.17,
+    "avg_final_silhouette_pixels": 27043
+  },
+  "comparison_with_baseline_masks": {
+    "mean_iou_pct": 98.65,
+    "min_iou_pct": 97.43,
+    "max_iou_pct": 99.06
+  },
+  "end_to_end_pipeline": {
+    "success_count": 64,
+    "success_rate_pct": 100.0
+  }
+}

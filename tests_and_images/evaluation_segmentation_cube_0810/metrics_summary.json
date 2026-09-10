@@ -1,0 +1,33 @@
+{
+  "dataset": "captures_0810_cube_calibrated",
+  "total_frames": 64,
+  "total_time_seconds": 91.02,
+  "avg_time_per_frame_seconds": 1.42,
+  "stage1_u2net": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_pixels": 2050667
+  },
+  "stage2_tuned_green": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_pixels_removed": 614458,
+    "avg_pixels_remaining": 1436208
+  },
+  "stage3_aruco_hull": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_markers_detected": 4.38,
+    "avg_board_pixels_removed": 403112
+  },
+  "stage4_morphological_cleanup": {
+    "success_count": 64,
+    "success_rate_pct": 100.0,
+    "avg_islands_removed": 181.08,
+    "avg_final_silhouette_pixels": 1006391
+  },
+  "end_to_end_pipeline": {
+    "success_count": 64,
+    "success_rate_pct": 100.0
+  }
+}

@@ -24,6 +24,8 @@ def generate_50_z_slices(npy_path, ply_path, out_dir, num_slices=50):
     x_min, x_max = np.min(pts_mm[:, 0]), np.max(pts_mm[:, 0])
     y_min, y_max = np.min(pts_mm[:, 1]), np.max(pts_mm[:, 1])
     z_min, z_max = np.min(pts_mm[:, 2]), np.max(pts_mm[:, 2])
+    pad_x = max(2.0, (x_max - x_min) * 0.08)
+    pad_y = max(2.0, (y_max - y_min) * 0.08)
     
     print("=" * 60)
     print("       NPY 3D OCCUPANCY VOLUME RANGES (Lesion 3)       ")
@@ -72,10 +74,8 @@ def generate_50_z_slices(npy_path, ply_path, out_dir, num_slices=50):
         ax.set_title(f"Slice {i+1:02d}/{num_slices} | Z = {z_mm:.2f} mm ({pct:.1f}% Height)\n"
                      f"Cross-Section Area: {area_mm2:.1f} mm² ({area_cm2:.3f} cm²)", 
                      fontsize=12, fontweight='bold', pad=10)
-        ax.set_xlabel("X Position (mm)", fontsize=11, fontweight='bold')
-        ax.set_ylabel("Y Position (mm)", fontsize=11, fontweight='bold')
-        ax.set_xlim(-28, 28)
-        ax.set_ylim(-24, 24)
+        ax.set_xlim(x_min - pad_x, x_max + pad_x)
+        ax.set_ylim(y_min - pad_y, y_max + pad_y)
         ax.grid(True, linestyle='--', alpha=0.5, color='gray')
         ax.axhline(0, color='red', linestyle=':', alpha=0.5, linewidth=1)
         ax.axvline(0, color='red', linestyle=':', alpha=0.5, linewidth=1)
@@ -117,13 +117,14 @@ def generate_50_z_slices(npy_path, ply_path, out_dir, num_slices=50):
         axs[i].set_title(f"#{i+1:02d} | Z={z_mm:.1f}mm", fontsize=8, fontweight='bold', pad=3)
         axs[i].set_xticks([])
         axs[i].set_yticks([])
-        axs[i].set_xlim(-26, 26)
-        axs[i].set_ylim(-22, 22)
+        axs[i].set_xlim(x_min - pad_x, x_max + pad_x)
+        axs[i].set_ylim(y_min - pad_y, y_max + pad_y)
         
-    plt.suptitle(f"Lesion 3 Volumetric Z-Stack: 50 Cross-Sectional Slices from Z={z_min:.2f}mm (Base) to Z={z_max:.2f}mm (Apex)", 
+    specimen_title = os.path.basename(os.path.dirname(out_dir.rstrip('/')))
+    plt.suptitle(f"{specimen_title} Volumetric Z-Stack: 50 Cross-Sectional Slices from Z={z_min:.2f}mm (Base) to Z={z_max:.2f}mm (Apex)", 
                  fontsize=15, fontweight='bold', y=0.99)
     plt.tight_layout()
-    montage_path = os.path.join(os.path.dirname(out_dir), "z_slices_50_montage.png")
+    montage_path = os.path.join(out_dir, "z_slices_50_montage.png")
     plt.savefig(montage_path, dpi=200, bbox_inches='tight')
     plt.close()
     print(f"Saved 50-slice montage to {montage_path}")
@@ -131,10 +132,10 @@ def generate_50_z_slices(npy_path, ply_path, out_dir, num_slices=50):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--npy", default="nerf_160826_0824_8-16_lesion_3/pointcloud_raw_obb_solid_table_volume.npy")
-    parser.add_argument("--ply", default="nerf_160826_0824_8-16_lesion_3/pointcloud_raw_obb_solid_table.ply")
-    parser.add_argument("--out_dir", default="nerf_160826_0824_8-16_lesion_3/z_slices_50")
-    parser.add_argument("--slices", type=int, default=50)
+    parser.add_argument("--npy", required=True, help="Path to binary occupancy .npy")
+    parser.add_argument("--ply", required=True, help="Path to solid point cloud .ply")
+    parser.add_argument("--out_dir", required=True, help="Output directory for Z-slices")
+    parser.add_argument("--slices", type=int, default=50, help="Number of Z-slices (default: 50)")
     args = parser.parse_args()
     
     generate_50_z_slices(args.npy, args.ply, args.out_dir, args.slices)

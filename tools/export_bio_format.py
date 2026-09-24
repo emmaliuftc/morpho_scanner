@@ -34,10 +34,18 @@ def process(ply_path):
     np.save(out_npy, volume)
     
     print("Done! Napari NPY generated successfully.")
+    return out_npy
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ply", required=True)
+    parser.add_argument("--extract_features", action="store_true", help="Extract 17-feature Haralick and morphometric vector")
     args = parser.parse_args()
     
-    process(args.ply)
+    out_npy = process(args.ply)
+    if args.extract_features and out_npy:
+        try:
+            from tools.extract_haralick_features import run_feature_extraction
+        except ImportError:
+            from extract_haralick_features import run_feature_extraction
+        run_feature_extraction(npy_path=out_npy)

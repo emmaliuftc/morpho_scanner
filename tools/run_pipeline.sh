@@ -11,7 +11,14 @@ RAW_DIR=$1
 GOLDEN_CALIB=$2
 STEPS=2000
 START_FROM=1
-STOP_AFTER=8
+STOP_AFTER=10
+
+if [ ! -d "$RAW_DIR" ] && [ -d "tests_and_images/$RAW_DIR" ]; then
+    RAW_DIR="tests_and_images/$RAW_DIR"
+fi
+if [ ! -f "$GOLDEN_CALIB" ] && [ -f "tests_and_images/$GOLDEN_CALIB" ]; then
+    GOLDEN_CALIB="tests_and_images/$GOLDEN_CALIB"
+fi
 
 shift 2
 while [[ $# -gt 0 ]]; do
@@ -57,11 +64,36 @@ TIMESTAMP=$(date +"%d%m%y_%H%M")
 
 if [ -n "$CUSTOM_SESSION_DIR" ]; then
     SESSION_DIR="$CUSTOM_SESSION_DIR"
+elif [ -d "tests_and_images" ]; then
+    SESSION_DIR="tests_and_images/nerf_${TIMESTAMP}_${DATASET_NAME}"
 else
     SESSION_DIR="nerf_${TIMESTAMP}_${DATASET_NAME}"
 fi
 PROGRESS_FILE="${SESSION_DIR}/progress.md"
-PYTHON_ENV=".venv_nerf/bin/python"
+
+if [ -z "$PYTHON_ENV" ]; then
+    if [ -f ".venv_nerf/bin/python" ]; then
+        PYTHON_ENV=".venv_nerf/bin/python"
+    elif [ -n "$VIRTUAL_ENV" ] && [ -f "$VIRTUAL_ENV/bin/python" ]; then
+        PYTHON_ENV="$VIRTUAL_ENV/bin/python"
+    elif [ -f "/home/coding/github/morpho_scanner/.venv_nerf/bin/python" ]; then
+        PYTHON_ENV="/home/coding/github/morpho_scanner/.venv_nerf/bin/python"
+    elif [ -f "../morpho_scanner/.venv_nerf/bin/python" ]; then
+        PYTHON_ENV="../morpho_scanner/.venv_nerf/bin/python"
+    else
+        PYTHON_ENV="python3"
+    fi
+fi
+
+NS_BIN_DIR="$(dirname "$PYTHON_ENV")"
+NS_TRAIN="$NS_BIN_DIR/ns-train"
+NS_EXPORT="$NS_BIN_DIR/ns-export"
+if [ ! -x "$NS_TRAIN" ]; then
+    NS_TRAIN="ns-train"
+fi
+if [ ! -x "$NS_EXPORT" ]; then
+    NS_EXPORT="ns-export"
+fi
 
 echo "========================================="
 echo "Starting Generalized NeRF Pipeline"
@@ -84,13 +116,10 @@ if [ "$START_FROM" -le 2 ] && [ "$STOP_AFTER" -ge 2 ]; then
         --out_dir "$SESSION_DIR" \
         --scale 4 $MASK_DIR_ARG $MASK_OPTIONS
 
-    # We only generate masks for the original resolution (scale=1) images
-    # Later scripts will reuse these masks or resize them if needed
-    if [ ! -d "${SESSION_DIR}/masks_1" ]; then
+    # If full-resolution images exist in images_1, generate native resolution masks
+    if [ -d "${SESSION_DIR}/images_1" ] && [ ! -d "${SESSION_DIR}/masks_1" ]; then
         echo "Running foreground extraction on native resolution images..."
         $PYTHON_ENV tools/generate_masks.py --calib "$GOLDEN_CALIB" --img_dir "${SESSION_DIR}/images_1" --out_dir "${SESSION_DIR}/masks_1" $MASK_OPTIONS
-    else
-        echo "Masks already exist. Skipping mask generation."
     fi
     echo "- [x] Step 1 & 2: Generated downscaled images and masks" >> "$PROGRESS_FILE"
 fi
@@ -134,7 +163,7 @@ with open('$SESSION_DIR/transforms.json', 'w') as f:
     json.dump(transforms, f, indent=4)
 "
 
-    .venv_nerf/bin/ns-train nerfacto \
+    "$NS_TRAIN" nerfacto \
         --data "$SESSION_DIR" \
         --output-dir "${SESSION_DIR}/outputs" \
         --vis tensorboard \
@@ -164,7 +193,7 @@ if [ "$START_FROM" -le 5 ] && [ "$STOP_AFTER" -ge 5 ]; then
     echo "[Step 5] Extracting Raw Point Clouds (Full and OBB)..."
     
     echo " -> Extracting Full Scene..."
-    .venv_nerf/bin/ns-export pointcloud \
+    "$NS_EXPORT" pointcloud \
         --load-config "$CONFIG_PATH" \
         --output-dir "${SESSION_DIR}/pointcloud_raw_full" \
         --num-points 1000000 \
@@ -174,7 +203,7 @@ if [ "$START_FROM" -le 5 ] && [ "$STOP_AFTER" -ge 5 ]; then
     mv "${SESSION_DIR}/pointcloud_raw_full/point_cloud.ply" "${SESSION_DIR}/pointcloud_raw_full.ply"
 
     echo " -> Extracting Cropped (OBB)..."
-    .venv_nerf/bin/ns-export pointcloud \
+    "$NS_EXPORT" pointcloud \
         --load-config "$CONFIG_PATH" \
         --output-dir "${SESSION_DIR}/pointcloud_raw_obb" \
         --num-points 1000000 \
@@ -235,7 +264,45 @@ if [ "$START_FROM" -le 8 ] && [ "$STOP_AFTER" -ge 8 ]; then
     echo "- [x] Step 8: Generated side-by-side projections" >> "$PROGRESS_FILE"
 fi
 
+if [ "$START_FROM" -le 9 ] && [ "$STOP_AFTER" -ge 9 ]; then
+    # Step 9: 17-Feature Morphometrics & Haralick GLCM Texture Analysis
+    echo "[Step 9] Extracting 17-Feature Morphometric & 3D Haralick Texture Profile..."
+    HARALICK_DIR="${SESSION_DIR}/haralick_morphometry"
+    mkdir -p "$HARALICK_DIR"
+    
+    for npy in "${SESSION_DIR}/pointcloud_raw_obb_solid_table_volume.npy" "${SESSION_DIR}/pointcloud_raw_full_solid_table_volume.npy"; do
+        if [ -f "$npy" ]; then
+            echo " -> Computing Haralick & morphometrics for: $npy"
+            $PYTHON_ENV tools/extract_haralick_features.py --npy "$npy" --out_dir "$HARALICK_DIR"
+        fi
+    done
+    echo "- [x] Step 9: Extracted 17-Feature Morphometrics & Haralick Texture" >> "$PROGRESS_FILE"
+fi
+
+if [ "$START_FROM" -le 10 ] && [ "$STOP_AFTER" -ge 10 ]; then
+    # Step 10: 50-Slice Pathology Z-Stack Cross-Sections & Microtome GIF
+    echo "[Step 10] Generating 50-Slice Pathology Z-Stack Cross-Sections & Microtome GIF..."
+    
+    # Prioritize OBB solid table volume if present, otherwise use full
+    TARGET_PLY=""
+    if [ -f "${SESSION_DIR}/pointcloud_raw_obb_solid_table.ply" ]; then
+        TARGET_PLY="${SESSION_DIR}/pointcloud_raw_obb_solid_table.ply"
+    elif [ -f "${SESSION_DIR}/pointcloud_raw_full_solid_table.ply" ]; then
+        TARGET_PLY="${SESSION_DIR}/pointcloud_raw_full_solid_table.ply"
+    fi
+    
+    if [ -n "$TARGET_PLY" ]; then
+        TARGET_NPY="${TARGET_PLY%.ply}_volume.npy"
+        if [ -f "$TARGET_NPY" ]; then
+            Z_SLICES_DIR="${SESSION_DIR}/z_slices_50"
+            echo " -> Generating 50 Z-slices for: $TARGET_PLY"
+            $PYTHON_ENV tools/generate_z_slices.py --npy "$TARGET_NPY" --ply "$TARGET_PLY" --out_dir "$Z_SLICES_DIR" --slices 50
+        fi
+    fi
+    echo "- [x] Step 10: Generated 50-Slice Pathology Z-Stack & Microtome GIF" >> "$PROGRESS_FILE"
+fi
+
 echo "Pipeline script finished!"
-if [ "$START_FROM" -le 8 ] && [ "$STOP_AFTER" -ge 8 ]; then
+if [ "$START_FROM" -le 10 ] && [ "$STOP_AFTER" -ge 10 ]; then
     echo "- [x] Pipeline fully completed!" >> "$PROGRESS_FILE"
 fi

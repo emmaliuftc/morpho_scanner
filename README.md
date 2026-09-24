@@ -60,8 +60,8 @@ The system integrates low-cost mechatronics, multi-factor computer vision filter
    * Identifies the mathematical table plane ($Z = 0$), trims below-table noise, extrudes voxels vertically downward to base plane, and preserves biological chirality via $180^\circ$ X-axis rotation.
 4. **④ Volumetric Medical Voxelization (`tools/export_bio_format.py`):**
    * Converts the solid geometry into a 3D binary occupancy grid (`.npy`) at pitch $0.002 = 0.3482\text{ mm/voxel}$ ($0.0422\text{ mm}^3$ unit voxel volume), natively compatible with **Napari**.
-5. **⑤ Extract 18-Feature Diagnostic Topographical Suite:**
-   * Automated calculation of real-world volume ($V$), surface area ($A$), sphericity index ($\Psi$), 14 Haralick Gray-Level Co-occurrence Matrix (GLCM) texture metrics, and recursive morphological erosion for automated lobe bifurcation counting.
+5. **⑤ Extract 17-Feature Diagnostic Topographical Suite (`tools/extract_haralick_features.py`):**
+   * Automated calculation of real-world volume ($V$ in $\text{cm}^3$), surface area ($A$), sphericity index ($\Psi$), 13 Haralick Gray-Level Co-occurrence Matrix (GLCM) 3D texture metrics, and recursive morphological erosion with dendrogram clustering for automated lobe bifurcation counting.
 6. **⑥ 50-Slice Pathology Z-Stack (`tools/generate_z_slices.py`):**
    * Produces 50 physical metric cross-sectional PNG slices, $5 \times 10$ montage overviews, and animated timelapse GIFs simulating pathology microtome sectioning.
 
@@ -82,6 +82,20 @@ The system has undergone rigorous metrological validation against precision refe
 
 ---
 
+## 🎬 Live Pipeline Demonstration (Full 10-Stage Walkthrough)
+
+An end-to-end execution of the complete 10-stage pipeline on the clinical lesion model (`captures_8-16_lesion_3`) is documented in:
+
+👉 [**`demo.md` — Complete Pipeline Demonstration & Artifact Inventory**](demo.md)
+
+### Highlights from the Live Demonstration:
+* **One-Command Hands-Free Pipeline:** Executed `./tools/run_pipeline.sh captures_8-16_lesion_3 captures_8-13_calibration_results/calibration.json --steps 2000` through all 10 stages without manual intervention.
+* **Safe Automatic Isolation:** Leveraged auto-timestamping (`nerf_240926_0008_8-16_lesion_3/`) to guarantee zero interference with historical golden runs.
+* **High-Speed Volumetric Recovery:** In just 2,000 steps (~2.5 minutes on NVIDIA L4 GPU), extracted a solid volume of **$2.2624\text{ cm}^3$**, matching the 200,000-step gold standard ($2.2600\text{ cm}^3$) within **$+0.1\%$ error**.
+* **Clinical Artifact Generation:** Produced 1M-point PLY meshes, Napari 3D binary occupancy grids (`.npy`), 17-feature Haralick JSON/CSV texture reports, polar radar plots, and a 50-slice virtual microtome pathology Z-stack with timelapse GIF animation.
+
+---
+
 ## 🚀 Quickstart & Pipeline Execution
 
 ### 1. Automated Master Pipeline
@@ -97,7 +111,7 @@ Run the end-to-end pipeline on any 64-view capture directory with a single comma
     --session-dir nerf_lesion_3_20k
 ```
 
-### 2. High-Density 2M Point Export & 50 Z-Slicing
+### 2. High-Density 2M Point Export, Haralick Texture & 50 Z-Slicing
 ```bash
 # Export 2,000,000 dense points from NeRF
 .venv_nerf/bin/ns-export pointcloud \
@@ -115,6 +129,11 @@ Run the end-to-end pipeline on any 64-view capture directory with a single comma
 # Export Napari 3D NPY binary occupancy array
 .venv_nerf/bin/python tools/export_bio_format.py \
     --ply "nerf_lesion_3_20k/pointcloud_solid.ply"
+
+# Extract 17-feature Haralick texture & morphological diagnostic profile
+.venv_nerf/bin/python tools/extract_haralick_features.py \
+    --npy "nerf_lesion_3_20k/pointcloud_solid_volume.npy" \
+    --out_dir "nerf_lesion_3_20k/haralick_morphometry"
 
 # Generate 50 physical Z-slices, montage, and animated timelapse GIF
 .venv_nerf/bin/python tools/generate_z_slices.py \
@@ -135,12 +154,16 @@ Run the end-to-end pipeline on any 64-view capture directory with a single comma
 
 ```
 morpho_scanner/
+├── demo.md                              # Live 10-stage automated pipeline walkthrough & artifact report
 ├── assets/                               # Visual pipeline diagrams and figures
 │   └── system_architecture_figure1.png   # Complete BMES Figure 1 architecture diagram
 ├── captures_8-13_calibration_results/    # Authoritative Golden Calibration standard
 ├── captures_8-16_lesion_1..4/           # Multi-angle clinical biopsy datasets
 ├── docs/                                # Technical whitepapers and mathematical derivations
 │   ├── reflection.md                    # Complete chronological engineering retrospective (June–Sept 2026)
+│   ├── calibration.md                   # 4-stage global turntable calibration & 17.41 cm baseline derivation
+│   ├── haralick.md                      # 17-feature morphological matrix & clinical Lesion 3 vs 4 (1.93×) validation
+│   ├── tsdf_rotational_ambiguity_image_guide.md # Silhouette ambiguity & 40mm cube ballooning analysis
 │   ├── segmentation.md                  # Multi-factor U²-Net + HSV + ArUco segmentation details
 │   ├── 0718.pipeline.md                 # Turntable epipolar invariants & screw-axis geometry
 │   ├── cube_comparison_0810.md          # 4cm CAD cube metrology verification report
@@ -154,6 +177,7 @@ morpho_scanner/
 │   ├── apply_golden_calibration.py      # Camera orbit pose alignment
 │   ├── fill_25d_extrusion.py            # 2.5D solid table extrusion & chirality correction
 │   ├── export_bio_format.py             # 3D binary occupancy grid (.npy) voxelizer
+│   ├── extract_haralick_features.py     # 17-feature Haralick texture & morphological diagnostic extractor
 │   ├── generate_z_slices.py             # 50-slice metric cross-sections & animated GIF generator
 │   └── project_all_masks.py             # 64-view closed-loop reprojection overlay verification
 └── assets/                              # Architecture diagrams and benchmark visuals

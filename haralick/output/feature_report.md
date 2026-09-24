@@ -1,6 +1,6 @@
 # NeRF Morphometric Feature Report
 
-**Generated:** 2026-09-13 17:55:38
+**Generated:** 2026-09-23 23:58:28
 
 **Method:** Ported from `polymorpho-lee-lab/features.py` + `hierarchical.py`
 

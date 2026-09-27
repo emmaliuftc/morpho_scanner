@@ -1,11 +1,21 @@
 import cv2
 import time
+import argparse
+from pathlib import Path
 from picamera2 import Picamera2
 from libcamera import controls
-import motor_test
+import pi_image_tools.motor_test as motor_test
 from dynamixel_sdk import *
 import select
 
+# Initialize the parser
+parser = argparse.ArgumentParser(description="Process a required file.")
+
+# Add a positional argument (automatically required)
+parser.add_argument("filepath", type=str, help="Path to the output directory")
+
+# Parse arguments
+args = parser.parse_args()
 
 # Make these match the actual ID numbers.  
 MOTOR = 1
@@ -45,7 +55,7 @@ try:
         motor_test.drop(4096+128) # 4096/32
         time.sleep(2)
         image = picam.capture_array()
-        cv2.imwrite(f"./captures_7-25_lob_with_checkbox/capture_{i}.jpg", image)
+        cv2.imwrite(args.filepath+"/capture_{i}.jpg", image)
         print(f"{i} image added")
 finally:
     picam.stop()

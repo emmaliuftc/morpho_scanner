@@ -7,6 +7,9 @@
 
 This repository contains the code for MorphoScanner, my automated 3D scanning and volumetric analysis tool.
 
+ <img src="assets/lesion_3_pc.gif" height="200" />  <img src="assets/lesion_2_pc.gif" height="200" />  <img src="assets/lesion_4_pc.gif" height="200" /> 
+
+
 
 ## System Architecture
 

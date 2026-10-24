@@ -52,7 +52,7 @@ See `demo.md` for a demonstration run on the `tests_and_images/captures_8-16_les
 ## How To Use
 
 ### Capture Data Images with Scanner
-
+These can only be run with the exact hardware setup outlined above otherwise it will error out.
 ```bash
 # Create new directory for data
 mkdir DATA_DIRECTORY
